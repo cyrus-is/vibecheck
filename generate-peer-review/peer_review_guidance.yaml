@@ -1,0 +1,1165 @@
+# Peer Review Guidance Reference
+# Platform-specific pre-flight checks and focus areas for peer code review generation.
+#
+# Key differences from security_guidance.yaml:
+#   - Items include `failure_mode` (how it breaks in prod)
+#   - Items include `lens` (which evaluation lens this maps to)
+#   - Items include `severity` (issue or concern, not CRITICAL/HIGH/etc)
+#   - Each platform also has `focus_areas` — things to actively look for
+#     that aren't simple pattern matches
+#   - Each platform has `change_type_signals` — patterns that trigger
+#     increased scrutiny on specific lenses
+#
+# Structure:
+#   category:
+#     platform_key:
+#       name: Human-readable name
+#       detect_files: List of files/globs that signal this platform
+#       detect_content: List of regex patterns to confirm
+#       preflight_checks: Known bug patterns (quick to detect, high value)
+#       focus_areas: Things the reviewer should actively explore
+#       change_type_signals: Patterns that modify review intensity
+
+# =============================================================================
+# BACKEND LANGUAGES
+# =============================================================================
+backend:
+  go:
+    name: Go
+    detect_files:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+    detect_content:
+      - "^module\\s+"
+    preflight_checks:
+      - id: go-err-shadow
+        title: Shadowed error variable
+        pattern: "Inner `:=` creates new `err` that shadows outer `err` — outer error check passes on wrong value"
+        failure_mode: "Silent data corruption or swallowed failure — the wrong error propagates up the stack"
+        fix: "Use `=` instead of `:=` for inner error, or use a distinct variable name (`innerErr`)"
+        lens: correctness
+        severity: issue
+
+      - id: go-goroutine-leak
+        title: Goroutine without lifecycle management
+        pattern: "`go func()` without context cancellation, timeout, or WaitGroup"
+        failure_mode: "Goroutine runs forever after parent context is cancelled — memory leak, stale work, potential panic on closed channel"
+        fix: "Pass `context.Context` with timeout; use `errgroup.Group` or `sync.WaitGroup`; select on `ctx.Done()`"
+        lens: production-reliability
+        severity: issue
+
+      - id: go-race-condition
+        title: Shared state without synchronization
+        pattern: "Map, slice, or struct field accessed from multiple goroutines without `sync.Mutex` or channels"
+        failure_mode: "Data race → panic (`concurrent map writes`) or silent corruption. Often only manifests under load."
+        fix: "Guard with `sync.Mutex`/`sync.RWMutex`, use channels, or use `sync.Map` for simple key-value"
+        lens: correctness
+        severity: issue
+
+      - id: go-unbounded-query
+        title: List endpoint without LIMIT
+        pattern: "SQL query for list endpoint missing `LIMIT` clause or accepting arbitrarily large limit parameter"
+        failure_mode: "Single request returns entire table → OOM, slow response, database pressure"
+        fix: "Add `LIMIT` clause with reasonable max (200); validate and cap user-supplied limit parameter"
+        lens: production-reliability
+        severity: issue
+
+      - id: go-missing-owner-scope
+        title: Query missing tenant scoping
+        pattern: "Database query filters by entity ID but omits `owner_user_id` or `workspace_id` WHERE clause"
+        failure_mode: "Cross-tenant data access — user A can read/modify user B's data by guessing IDs"
+        fix: "Always include owner/workspace scope in every query. Defense-in-depth: use Row-Level Security"
+        lens: correctness
+        severity: issue
+
+      - id: go-patch-nil-handling
+        title: PATCH endpoint conflates omit and null
+        pattern: "PATCH handler doesn't distinguish between 'field not sent' (omit) and 'field sent as null' (clear)"
+        failure_mode: "Updating one field silently clears other fields, or clearing a field is impossible"
+        fix: "Use pointer fields or a `FieldMask` pattern; check JSON key presence before applying updates"
+        lens: correctness
+        severity: concern
+
+      - id: go-pii-in-logs
+        title: PII in log statements
+        pattern: "`slog`, `log`, or `fmt.Printf` logging raw request bodies, auth responses, emails, phone numbers, or tokens"
+        failure_mode: "PII persists in CloudWatch/log aggregators — compliance violation, data breach vector"
+        fix: "Log only non-sensitive identifiers (user ID, request ID); redact PII fields"
+        lens: operability
+        severity: concern
+
+      - id: go-http-no-timeout
+        title: HTTP client without timeout
+        pattern: "`http.Client{}` or `http.Get()` without explicit timeout — default is no timeout"
+        failure_mode: "Downstream service hangs → goroutine blocked forever → connection pool exhaustion → cascading failure"
+        fix: "Always set `client.Timeout` or use `context.WithTimeout` on every outbound request"
+        lens: production-reliability
+        severity: issue
+
+      - id: go-defer-in-loop
+        title: Deferred resource cleanup in loop
+        pattern: "`defer rows.Close()` or `defer resp.Body.Close()` inside a loop body"
+        failure_mode: "Deferred calls don't run until function returns — resources accumulate through loop iterations → exhaustion"
+        fix: "Close resources explicitly at end of each iteration, or extract loop body into a separate function"
+        lens: performance
+        severity: issue
+
+      - id: go-context-background
+        title: context.Background() in request handler
+        pattern: "`context.Background()` or `context.TODO()` used inside an HTTP handler instead of `r.Context()`"
+        failure_mode: "Request cancellation doesn't propagate — work continues after client disconnects, wasting resources"
+        fix: "Use `r.Context()` from the HTTP request; propagate it to all downstream calls"
+        lens: production-reliability
+        severity: concern
+
+    focus_areas:
+      - area: "Goroutine lifecycle"
+        description: "Are contexts propagated? Do goroutines have shutdown paths? Are there fire-and-forget goroutines that should be tracked?"
+        lens: production-reliability
+
+      - area: "Transaction boundaries"
+        description: "Are multi-step DB operations wrapped in transactions? Could a partial failure leave data inconsistent?"
+        lens: data-integrity
+
+      - area: "HTTP client configuration"
+        description: "Are timeouts set on all outbound HTTP calls? Is connection pooling appropriate? Are retries idempotent?"
+        lens: production-reliability
+
+      - area: "Graceful shutdown"
+        description: "Does the service drain connections before exiting? Are background goroutines stopped on SIGTERM?"
+        lens: operability
+
+      - area: "Error propagation"
+        description: "Are errors wrapped with context (`fmt.Errorf('...': %w, err)`)? Can you trace an error back to its origin from the logs?"
+        lens: operability
+
+      - area: "Middleware ordering"
+        description: "Does the order of middleware matter (auth before rate limit? CORS before routing?)? Is it correct?"
+        lens: correctness
+
+    change_type_signals:
+      - type: database-migration
+        patterns: ["db/migrations/*.sql", "**/migrations/*.sql"]
+      - type: api-contract
+        patterns: ["**/openapi/*.yaml", "**/*.proto", "**/*.graphql"]
+      - type: config-change
+        patterns: ["**/config/*.go", "**/config/*.yaml"]
+
+  python:
+    name: Python
+    detect_files:
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "setup.py"
+      - "Pipfile"
+      - "**/*.py"
+    detect_content:
+      - "^from\\s+\\w+\\s+import"
+    preflight_checks:
+      - id: py-bare-except
+        title: Bare except clause
+        pattern: "`except:` or `except Exception:` swallowing all errors without logging or re-raising"
+        failure_mode: "Errors disappear silently — bugs become invisible, system operates in degraded state without alerting"
+        fix: "Catch specific exceptions; log unexpected ones; re-raise if you can't handle them"
+        lens: error-handling
+        severity: issue
+
+      - id: py-mutable-default
+        title: Mutable default argument
+        pattern: "Function parameter with mutable default: `def foo(items=[])`, `def foo(config={})`"
+        failure_mode: "Default object is shared across all calls — state leaks between invocations, mysterious behavior"
+        fix: "Use `None` as default and create mutable inside: `items = items or []`"
+        lens: correctness
+        severity: issue
+
+      - id: py-async-sync-mix
+        title: Blocking call in async context
+        pattern: "Synchronous I/O (`requests.get`, `open()`, `time.sleep()`) called inside an `async def` function"
+        failure_mode: "Blocks the entire event loop — all concurrent requests stall until the blocking call completes"
+        fix: "Use `aiohttp`/`httpx` for HTTP, `aiofiles` for file I/O, `asyncio.sleep()` for delays"
+        lens: performance
+        severity: issue
+
+      - id: py-no-timeout
+        title: HTTP request without timeout
+        pattern: "`requests.get/post()` without `timeout` parameter — default is no timeout"
+        failure_mode: "Request hangs forever on unresponsive server → thread/worker blocked → pool exhaustion"
+        fix: "Always pass `timeout=(connect, read)`: `requests.get(url, timeout=(5, 30))`"
+        lens: production-reliability
+        severity: issue
+
+      - id: py-broad-try
+        title: Try block too broad
+        pattern: "Large try block wrapping many statements — catching errors from unintended code"
+        failure_mode: "Wrong exception caught from wrong line — error handling runs for the wrong reason, masking the real bug"
+        fix: "Narrow try blocks to the specific operation that can fail"
+        lens: error-handling
+        severity: concern
+
+      - id: py-f-string-sql
+        title: SQL injection via f-string
+        pattern: "f-strings or `.format()` used to build SQL queries with user input"
+        failure_mode: "SQL injection → data breach, data destruction, auth bypass"
+        fix: "Use parameterized queries: `cursor.execute(query, params)` or ORM query builders"
+        lens: correctness
+        severity: issue
+
+      - id: py-missing-migration
+        title: Model change without migration
+        pattern: "ORM model fields changed but no new migration file in the same PR"
+        failure_mode: "Deploy succeeds but app crashes on first DB query — model/schema mismatch"
+        fix: "Generate and include migration: `alembic revision --autogenerate` or `python manage.py makemigrations`"
+        lens: data-integrity
+        severity: issue
+
+    focus_areas:
+      - area: "Exception handling strategy"
+        description: "Are exceptions caught at appropriate levels? Do they propagate useful context? Are retryable errors distinguished from permanent?"
+        lens: error-handling
+
+      - area: "Async/sync boundaries"
+        description: "Are blocking operations kept out of async contexts? Is the concurrency model consistent?"
+        lens: performance
+
+      - area: "Database session lifecycle"
+        description: "Are sessions properly scoped and closed? Could long-lived sessions hold locks or stale data?"
+        lens: data-integrity
+
+      - area: "Import-time side effects"
+        description: "Do module imports trigger connections, file reads, or state changes? This breaks testing and cold starts."
+        lens: maintainability
+
+    change_type_signals:
+      - type: database-migration
+        patterns: ["**/migrations/*.py", "**/alembic/versions/*.py"]
+      - type: dependency-update
+        patterns: ["requirements*.txt", "pyproject.toml", "Pipfile.lock"]
+
+  java:
+    name: Java
+    detect_files:
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"
+      - "**/*.java"
+    detect_content:
+      - "^package\\s+[a-z]"
+    preflight_checks:
+      - id: java-null-deref
+        title: Potential NullPointerException
+        pattern: "Method chain on nullable return value without null check — especially from `.findById()`, `.get()`, `.map()` terminal operations"
+        failure_mode: "NPE in production → 500 error, crash, lost request"
+        fix: "Use `Optional.orElseThrow()`, `Optional.map()`, or explicit null checks before chaining"
+        lens: correctness
+        severity: issue
+
+      - id: java-resource-leak
+        title: Resource not closed
+        pattern: "`Connection`, `InputStream`, `ResultSet`, `HttpClient` opened without try-with-resources or explicit close"
+        failure_mode: "Resource leak → pool exhaustion → service stops accepting connections under load"
+        fix: "Use try-with-resources: `try (var conn = dataSource.getConnection()) { ... }`"
+        lens: production-reliability
+        severity: issue
+
+      - id: java-synchronized-broad
+        title: Over-broad synchronization
+        pattern: "`synchronized(this)` or synchronized method covering more than the critical section"
+        failure_mode: "Thread contention → throughput collapses under concurrency"
+        fix: "Synchronize only the critical section; use `ReentrantLock` or concurrent data structures"
+        lens: performance
+        severity: concern
+
+      - id: java-exception-swallow
+        title: Swallowed exception
+        pattern: "Empty catch block or catch that only logs without re-throwing or returning error"
+        failure_mode: "Failure is invisible — upstream code assumes success, operates on stale/missing data"
+        fix: "Re-throw as appropriate exception type, or return error result; never empty catch"
+        lens: error-handling
+        severity: issue
+
+      - id: java-spring-transaction
+        title: Missing @Transactional
+        pattern: "Service method performing multiple repository writes without `@Transactional`"
+        failure_mode: "Partial write on failure — data inconsistency between related entities"
+        fix: "Add `@Transactional` to methods with multiple writes; consider read-only variant for queries"
+        lens: data-integrity
+        severity: issue
+
+      - id: java-n-plus-one
+        title: N+1 query pattern
+        pattern: "Loop that calls repository/DAO inside each iteration — especially with JPA lazy loading"
+        failure_mode: "Linear query count with data size → response time degrades, DB overloaded"
+        fix: "Use `JOIN FETCH`, `@EntityGraph`, or batch the IDs into a single `WHERE IN` query"
+        lens: performance
+        severity: issue
+
+    focus_areas:
+      - area: "Transaction boundaries"
+        description: "Are @Transactional scopes correct? Could a RuntimeException roll back more than intended?"
+        lens: data-integrity
+
+      - area: "Connection pool sizing"
+        description: "Is HikariCP/c3p0 configured appropriately? Could the pool be exhausted under peak load?"
+        lens: production-reliability
+
+      - area: "Thread safety of shared beans"
+        description: "Are singleton Spring beans thread-safe? Mutable state in @Service or @Component?"
+        lens: correctness
+
+    change_type_signals:
+      - type: database-migration
+        patterns: ["**/db/migration/*.sql", "**/flyway/*.sql", "**/liquibase/*.xml"]
+      - type: dependency-update
+        patterns: ["pom.xml", "build.gradle", "build.gradle.kts"]
+
+  node:
+    name: Node.js / JavaScript
+    detect_files:
+      - "package.json"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+    detect_content:
+      - "\"express\""
+      - "\"fastify\""
+      - "\"koa\""
+      - "\"hapi\""
+    preflight_checks:
+      - id: node-unhandled-promise
+        title: Unhandled promise rejection
+        pattern: "Async function called without `await` or `.catch()` — especially in Express route handlers"
+        failure_mode: "Unhandled rejection crashes the process (Node 15+) or silently drops the error"
+        fix: "Always `await` or attach `.catch()`; use an async error wrapper for Express routes"
+        lens: production-reliability
+        severity: issue
+
+      - id: node-callback-error-ignore
+        title: Callback error ignored
+        pattern: "Callback invoked with `(err, result)` but `err` is not checked before using `result`"
+        failure_mode: "Operating on undefined/null result after error — TypeError or silent data corruption"
+        fix: "Check `if (err)` before using result; prefer promise/async patterns over callbacks"
+        lens: error-handling
+        severity: issue
+
+      - id: node-event-emitter-leak
+        title: Event listener leak
+        pattern: "Repeated `.on()` or `.addEventListener()` without corresponding `.off()` or `.removeListener()`"
+        failure_mode: "Memory leak — listeners accumulate, MaxListenersExceededWarning, eventual OOM"
+        fix: "Remove listeners in cleanup; use `.once()` for one-time events; track listener lifecycle"
+        lens: performance
+        severity: concern
+
+      - id: node-sync-in-event-loop
+        title: Synchronous blocking in event loop
+        pattern: "`fs.readFileSync`, `child_process.execSync`, `crypto.pbkdf2Sync` in request handler"
+        failure_mode: "Blocks the entire event loop — all concurrent requests stall"
+        fix: "Use async variants: `fs.promises.readFile`, `child_process.exec`, `crypto.pbkdf2`"
+        lens: performance
+        severity: issue
+
+      - id: node-no-error-middleware
+        title: Express app without error handler
+        pattern: "Express app missing `app.use((err, req, res, next) => {...})` error-handling middleware"
+        failure_mode: "Unhandled errors return raw stack traces to clients — information leak + poor UX"
+        fix: "Add error-handling middleware as last `app.use()` with 4-argument signature"
+        lens: error-handling
+        severity: concern
+
+    focus_areas:
+      - area: "Promise chain error handling"
+        description: "Do promise chains have catch handlers? Could a rejection go unhandled?"
+        lens: error-handling
+
+      - area: "Event loop blocking"
+        description: "Are there CPU-intensive operations or synchronous I/O in the hot path?"
+        lens: performance
+
+      - area: "Connection/resource cleanup"
+        description: "Are database connections, file handles, and sockets properly cleaned up on error paths?"
+        lens: production-reliability
+
+      - area: "Dependency audit"
+        description: "Do new dependencies have known CVEs? Are they actively maintained?"
+        lens: maintainability
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"]
+
+  rust:
+    name: Rust
+    detect_files:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "**/*.rs"
+    detect_content:
+      - "^\\[package\\]"
+    preflight_checks:
+      - id: rust-unwrap-in-prod
+        title: unwrap/expect on fallible operation
+        pattern: "`.unwrap()` or `.expect()` on `Result`/`Option` from I/O, network, or user input"
+        failure_mode: "Panic in production → process crash, request dropped, potential data loss"
+        fix: "Use `?` operator for propagation, `match` for handling, `.unwrap_or_default()` for safe fallback"
+        lens: production-reliability
+        severity: issue
+
+      - id: rust-unsafe-audit
+        title: Unsafe block without invariant documentation
+        pattern: "`unsafe { }` block without comments explaining the safety invariants"
+        failure_mode: "Future modifications violate undocumented invariants → UB, memory corruption"
+        fix: "Document the safety invariants with `// SAFETY:` comment explaining why this is sound"
+        lens: maintainability
+        severity: concern
+
+      - id: rust-unbounded-collect
+        title: Unbounded iterator collection
+        pattern: "`.collect::<Vec<_>>()` on iterator from untrusted source without `.take(limit)`"
+        failure_mode: "Unbounded input → OOM, denial of service"
+        fix: "Add `.take(MAX_ITEMS)` before `.collect()` on untrusted iterators"
+        lens: production-reliability
+        severity: issue
+
+      - id: rust-arc-mutex-contention
+        title: Arc<Mutex<T>> in hot path
+        pattern: "`Arc<Mutex<T>>` used for shared state accessed on every request"
+        failure_mode: "Lock contention under concurrency → throughput degrades linearly with load"
+        fix: "Consider `DashMap`, `RwLock`, sharding, or lock-free data structures for hot-path state"
+        lens: performance
+        severity: concern
+
+    focus_areas:
+      - area: "Error type design"
+        description: "Are error types specific enough for callers to make decisions? Or is everything `anyhow::Error`?"
+        lens: maintainability
+
+      - area: "Async runtime configuration"
+        description: "Is the Tokio runtime configured appropriately? Worker threads, blocking thread pool?"
+        lens: production-reliability
+
+      - area: "Lifetime scoping"
+        description: "Are lifetimes introducing unnecessary complexity? Could owned types simplify the API?"
+        lens: maintainability
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["Cargo.toml", "Cargo.lock"]
+
+  csharp:
+    name: "C# / .NET"
+    detect_files:
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "**/*.cs"
+    detect_content:
+      - "^using\\s+System"
+    preflight_checks:
+      - id: cs-async-void
+        title: "async void method"
+        pattern: "`async void` method (other than event handlers) — exceptions crash the process"
+        failure_mode: "Unhandled exception in fire-and-forget async void → process crash, no stack trace"
+        fix: "Use `async Task` and await the result; for fire-and-forget, use `Task.Run` with error handling"
+        lens: production-reliability
+        severity: issue
+
+      - id: cs-dispose-missing
+        title: IDisposable not disposed
+        pattern: "`HttpClient`, `DbConnection`, `StreamReader` created without `using` statement or `Dispose()` call"
+        failure_mode: "Resource leak → port exhaustion (HttpClient), connection pool drain, file lock"
+        fix: "Use `using` statement or `using` declaration; for `HttpClient`, use `IHttpClientFactory`"
+        lens: production-reliability
+        severity: issue
+
+      - id: cs-task-result-sync
+        title: Synchronous .Result/.Wait() on Task
+        pattern: "`.Result`, `.Wait()`, or `.GetAwaiter().GetResult()` on async Task in request handler"
+        failure_mode: "Thread pool starvation → deadlock under load (especially in ASP.NET with sync context)"
+        fix: "Use `await` instead; if truly needed in sync context, use `Task.Run(() => ...).Result`"
+        lens: performance
+        severity: issue
+
+    focus_areas:
+      - area: "Dependency injection lifecycle"
+        description: "Are services registered with correct lifetimes? Scoped services in singleton?"
+        lens: correctness
+
+      - area: "EF Core query performance"
+        description: "Are queries using tracking where not needed? N+1 from lazy loading?"
+        lens: performance
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["**/*.csproj", "Directory.Packages.props"]
+
+  ruby:
+    name: Ruby
+    detect_files:
+      - "Gemfile"
+      - "**/*.rb"
+    detect_content:
+      - "^gem\\s+['\"]rails['\"]"
+    preflight_checks:
+      - id: ruby-n-plus-one
+        title: N+1 query
+        pattern: "Association accessed in view/loop without `.includes()` or `.eager_load()` in controller"
+        failure_mode: "Linear query count → page load time scales with data, DB connection saturation"
+        fix: "Add `.includes(:association)` to the query; use `bullet` gem to detect in development"
+        lens: performance
+        severity: issue
+
+      - id: ruby-callback-side-effect
+        title: Heavy side effect in ActiveRecord callback
+        pattern: "`after_save`, `after_create` callback that makes HTTP calls, sends emails, or enqueues jobs"
+        failure_mode: "Side effect runs inside transaction → transaction held open during slow operation; failure rolls back unexpectedly"
+        fix: "Use `after_commit` for external effects; prefer explicit service objects over callbacks"
+        lens: production-reliability
+        severity: concern
+
+      - id: ruby-mass-assignment
+        title: Unpermitted parameters
+        pattern: "`params` hash passed to `.create` or `.update` without `strong_parameters` permit"
+        failure_mode: "User can set admin flags, ownership fields, or other unintended attributes"
+        fix: "Use `params.require(:model).permit(:field1, :field2)` in controllers"
+        lens: correctness
+        severity: issue
+
+    focus_areas:
+      - area: "Background job idempotency"
+        description: "Are Sidekiq/ActiveJob workers idempotent? Can they safely retry on failure?"
+        lens: production-reliability
+
+      - area: "Database migration safety"
+        description: "Can migrations run without locking tables? Are they reversible?"
+        lens: data-integrity
+
+    change_type_signals:
+      - type: database-migration
+        patterns: ["db/migrate/*.rb"]
+      - type: dependency-update
+        patterns: ["Gemfile", "Gemfile.lock"]
+
+  php:
+    name: PHP
+    detect_files:
+      - "composer.json"
+      - "**/*.php"
+    detect_content:
+      - "^<\\?php"
+    preflight_checks:
+      - id: php-error-suppress
+        title: Error suppression operator
+        pattern: "`@` operator suppressing errors: `@file_get_contents()`, `@unlink()`"
+        failure_mode: "Errors disappear — debugging becomes impossible, failures cascade silently"
+        fix: "Remove `@`; handle errors explicitly with try/catch or return value checks"
+        lens: error-handling
+        severity: concern
+
+      - id: php-no-prepared
+        title: SQL without prepared statement
+        pattern: "Variable interpolation in `mysqli_query()`, `$pdo->query()`, or raw `DB::select()`"
+        failure_mode: "SQL injection — data breach, data destruction, auth bypass"
+        fix: "Use prepared statements: `$pdo->prepare($sql)->execute([$param])` or Eloquent"
+        lens: correctness
+        severity: issue
+
+    focus_areas:
+      - area: "Request lifecycle awareness"
+        description: "Is state properly scoped to the request? Are there singletons leaking state between requests?"
+        lens: correctness
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["composer.json", "composer.lock"]
+
+# =============================================================================
+# WEB FRAMEWORKS
+# =============================================================================
+web:
+  react:
+    name: React / Next.js
+    detect_files:
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "next.config.*"
+    detect_content:
+      - "\"react\""
+      - "from 'react'"
+    preflight_checks:
+      - id: react-missing-cleanup
+        title: useEffect without cleanup
+        pattern: "`useEffect` that creates subscriptions, timers, or event listeners without returning a cleanup function"
+        failure_mode: "Memory leak — listeners accumulate on navigation, stale callbacks fire on unmounted components"
+        fix: "Return cleanup function: `useEffect(() => { const id = setInterval(...); return () => clearInterval(id); }, [])`"
+        lens: correctness
+        severity: issue
+
+      - id: react-stale-closure
+        title: Stale closure in useEffect/useCallback
+        pattern: "Callback references state variable but dependency array is empty `[]` or missing the variable"
+        failure_mode: "Callback captures initial value — operates on stale data, produces wrong results"
+        fix: "Include all referenced variables in dependency array; use `useRef` for mutable values that shouldn't trigger re-render"
+        lens: correctness
+        severity: issue
+
+      - id: react-render-in-render
+        title: State update during render
+        pattern: "`setState` or `dispatch` called unconditionally during component render (not in event handler or effect)"
+        failure_mode: "Infinite re-render loop — browser tab freezes, CPU spike"
+        fix: "Move state updates to `useEffect`, event handlers, or use `useMemo` for derived state"
+        lens: correctness
+        severity: issue
+
+      - id: react-key-index
+        title: Array index as key in dynamic list
+        pattern: "`key={index}` on list items that can be reordered, inserted, or deleted"
+        failure_mode: "React reuses wrong component instances — input state bleeds between items, animation glitches"
+        fix: "Use stable, unique identifiers as keys: `key={item.id}`"
+        lens: correctness
+        severity: concern
+
+      - id: react-prop-drilling-state
+        title: Server state managed as client state
+        pattern: "API response stored in `useState` and passed through props instead of using a data-fetching library"
+        failure_mode: "No cache invalidation, no background refresh, stale data displayed after mutations"
+        fix: "Use React Query/SWR/RTK Query for server state; reserve useState for UI state"
+        lens: maintainability
+        severity: concern
+
+    focus_areas:
+      - area: "Re-render performance"
+        description: "Are expensive components memoized? Do callbacks have stable references? Could re-renders cascade?"
+        lens: performance
+
+      - area: "SSR/hydration consistency"
+        description: "Could server and client render different content? Check for window/document access during SSR."
+        lens: correctness
+
+      - area: "Error boundaries"
+        description: "Are there error boundaries around component trees that could throw? What happens when a child crashes?"
+        lens: production-reliability
+
+      - area: "Bundle size impact"
+        description: "Does this change import a large new dependency? Is it tree-shakeable?"
+        lens: performance
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["package.json", "package-lock.json"]
+
+  vue:
+    name: Vue.js
+    detect_files:
+      - "**/*.vue"
+      - "nuxt.config.*"
+    detect_content:
+      - "\"vue\""
+    preflight_checks:
+      - id: vue-reactive-loss
+        title: Reactivity lost by destructuring
+        pattern: "Destructuring reactive object: `const { x, y } = reactive(obj)` — values lose reactivity"
+        failure_mode: "UI doesn't update when values change — stale display, confused users"
+        fix: "Use `toRefs()`: `const { x, y } = toRefs(state)`, or access via `state.x`"
+        lens: correctness
+        severity: issue
+
+      - id: vue-watcher-leak
+        title: Watcher without cleanup
+        pattern: "`watch()` or `watchEffect()` created in non-setup context without manual stop"
+        failure_mode: "Watcher runs after component unmount — stale updates, memory leak"
+        fix: "Store return value and call it in `onUnmounted()`: `const stop = watch(...); onUnmounted(stop)`"
+        lens: correctness
+        severity: concern
+
+    focus_areas:
+      - area: "Composable lifecycle"
+        description: "Are composables properly scoped to component lifecycle? Do they clean up?"
+        lens: correctness
+
+    change_type_signals:
+      - type: dependency-update
+        patterns: ["package.json"]
+
+# =============================================================================
+# MOBILE PLATFORMS
+# =============================================================================
+mobile:
+  ios:
+    name: iOS (Swift/SwiftUI)
+    detect_files:
+      - "**/*.swift"
+      - "**/project.yml"
+      - "**/*.pbxproj"
+    detect_content:
+      - "import SwiftUI"
+      - "import UIKit"
+    preflight_checks:
+      - id: ios-dismiss-before-async
+        title: Sheet dismiss before async completion
+        pattern: "`dismiss()` called outside or after a `Task {}` block that contains an `await`"
+        failure_mode: "Sheet disappears before API call finishes — user thinks action succeeded but it may not have"
+        fix: "Call `dismiss()` inside the Task block, after the await succeeds"
+        lens: correctness
+        severity: issue
+
+      - id: ios-state-not-synced
+        title: ViewModel mutation not synced to parent
+        pattern: "ViewModel mutates local state but doesn't propagate change back to parent (e.g., AppState)"
+        failure_mode: "UI in parent view shows stale data — user sees inconsistent state across screens"
+        fix: "Update parent state (AppState, environment object) when local ViewModel mutations succeed"
+        lens: correctness
+        severity: issue
+
+      - id: ios-default-pagination
+        title: API call with default pagination
+        pattern: "API list call with `params: nil` or no `limit` parameter — server defaults to 50"
+        failure_mode: "List silently truncated — user sees incomplete data, thinks items are missing"
+        fix: "Send explicit `limit` parameter: `['limit': '200']`"
+        lens: correctness
+        severity: concern
+
+      - id: ios-retain-cycle
+        title: Retain cycle in closure
+        pattern: "`self` captured strongly in closure passed to long-lived object without `[weak self]`"
+        failure_mode: "Memory leak — view controller/view model never deallocated, accumulates on navigation"
+        fix: "Use `[weak self]` or `[unowned self]` in closures for long-lived observers/timers"
+        lens: performance
+        severity: issue
+
+      - id: ios-task-not-cancelled
+        title: Task not cancelled on disappear
+        pattern: "`.task {}` or `Task {}` that starts network work but isn't cancelled when view disappears"
+        failure_mode: "Stale async work completes and updates state of a destroyed view — potential crash or stale data"
+        fix: "Use `.task` modifier (auto-cancelled) or store Task handle and cancel in `onDisappear`"
+        lens: correctness
+        severity: concern
+
+      - id: ios-main-thread-violation
+        title: UI update off main thread
+        pattern: "State update or UI mutation performed inside a background Task without `@MainActor` or `DispatchQueue.main`"
+        failure_mode: "Crash or undefined behavior — UIKit/SwiftUI requires main thread for UI updates"
+        fix: "Mark async methods that update UI with `@MainActor`, or use `await MainActor.run { }`"
+        lens: correctness
+        severity: issue
+
+    focus_areas:
+      - area: "@Observable propagation"
+        description: "Does state flow correctly through the view hierarchy? Are views observing the right source of truth?"
+        lens: correctness
+
+      - area: "Offline behavior"
+        description: "What happens when network is unreachable? Does the app show cached data or crash?"
+        lens: production-reliability
+
+      - area: "Memory in closures"
+        description: "Are capture lists correct in async contexts? Could closures create reference cycles?"
+        lens: performance
+
+      - area: "Keychain error handling"
+        description: "Are Keychain failures handled (device locked, first unlock after reboot)?"
+        lens: production-reliability
+
+    change_type_signals:
+      - type: config-change
+        patterns: ["**/project.yml", "**/Info.plist", "**/*.entitlements"]
+
+  android:
+    name: Android (Kotlin/Java)
+    detect_files:
+      - "**/build.gradle.kts"
+      - "**/build.gradle"
+      - "**/AndroidManifest.xml"
+      - "**/*.kt"
+    detect_content:
+      - "android {"
+    preflight_checks:
+      - id: android-lifecycle-coroutine
+        title: Coroutine not scoped to lifecycle
+        pattern: "`GlobalScope.launch` or `CoroutineScope(Dispatchers.IO)` instead of `viewModelScope`/`lifecycleScope`"
+        failure_mode: "Coroutine outlives activity/fragment → crash on UI update, memory leak, wasted work"
+        fix: "Use `viewModelScope.launch` or `lifecycleScope.launch` — automatically cancelled on destroy"
+        lens: correctness
+        severity: issue
+
+      - id: android-config-change-loss
+        title: State lost on configuration change
+        pattern: "State stored in Activity/Fragment field without `SavedStateHandle`, `ViewModel`, or `rememberSaveable`"
+        failure_mode: "Screen rotation or theme change destroys activity — user loses form input, scroll position, selections"
+        fix: "Use `ViewModel` for UI state; `SavedStateHandle` for state that survives process death"
+        lens: correctness
+        severity: concern
+
+      - id: android-main-thread-io
+        title: I/O on main thread
+        pattern: "Network call, database query, or file I/O on `Dispatchers.Main` or without coroutine dispatcher"
+        failure_mode: "ANR (Application Not Responding) dialog after 5 seconds — user force-kills app"
+        fix: "Use `withContext(Dispatchers.IO) { ... }` for all I/O operations"
+        lens: performance
+        severity: issue
+
+      - id: android-permission-check
+        title: Missing runtime permission check
+        pattern: "Using camera, location, contacts, or storage without `checkSelfPermission` / `requestPermissions`"
+        failure_mode: "SecurityException crash on Android 6+ — app crashes instead of asking for permission"
+        fix: "Check and request permissions using `ActivityResultContracts.RequestPermission()`"
+        lens: production-reliability
+        severity: issue
+
+    focus_areas:
+      - area: "Process death recovery"
+        description: "Does critical state survive process death? Is SavedStateHandle used for anything beyond ViewModel?"
+        lens: production-reliability
+
+      - area: "Fragment/Navigation lifecycle"
+        description: "Are observers registered in the correct lifecycle method? Could they fire on a destroyed view?"
+        lens: correctness
+
+      - area: "ProGuard/R8 rules"
+        description: "Could minification break reflection-based code (serialization, DI, Firebase)?"
+        lens: production-reliability
+
+    change_type_signals:
+      - type: config-change
+        patterns: ["**/build.gradle.kts", "**/AndroidManifest.xml"]
+      - type: dependency-update
+        patterns: ["**/build.gradle.kts", "**/libs.versions.toml"]
+
+# =============================================================================
+# INFRASTRUCTURE & CI/CD
+# =============================================================================
+infrastructure:
+  terraform:
+    name: Terraform
+    detect_files:
+      - "**/*.tf"
+      - "**/*.tfvars"
+    detect_content:
+      - "^resource\\s+\""
+    preflight_checks:
+      - id: tf-destructive-change
+        title: Potentially destructive resource change
+        pattern: "Resource attribute change that forces replacement (`# forces replacement` in plan) — e.g., renaming, changing engine, moving AZs"
+        failure_mode: "Terraform destroys and recreates the resource → downtime, data loss (for stateful resources like RDS, S3)"
+        fix: "Use `lifecycle { prevent_destroy = true }` for stateful resources; use `create_before_destroy` for zero-downtime replacements"
+        lens: data-integrity
+        severity: issue
+
+      - id: tf-missing-state-lock
+        title: No state locking configured
+        pattern: "S3 backend without DynamoDB table for state locking, or local backend"
+        failure_mode: "Concurrent applies corrupt state file → drift, resource orphaning, manual recovery"
+        fix: "Add DynamoDB table for state locking; never use local backend for shared infrastructure"
+        lens: operability
+        severity: issue
+
+      - id: tf-no-plan-before-apply
+        title: Apply without reviewing plan
+        pattern: "CI pipeline runs `terraform apply -auto-approve` without a plan review step or approval gate"
+        failure_mode: "Unreviewed infrastructure changes go live — could delete production resources"
+        fix: "Separate plan and apply stages with manual approval gate between them"
+        lens: operability
+        severity: issue
+
+    focus_areas:
+      - area: "Blast radius"
+        description: "How many resources does this change affect? Could it cascade to dependent modules?"
+        lens: operability
+
+      - area: "Rollback story"
+        description: "Can this change be reverted? Is the previous state recoverable?"
+        lens: operability
+
+      - area: "State drift risk"
+        description: "Were any of these resources previously modified manually? Will apply overwrite manual changes?"
+        lens: data-integrity
+
+    change_type_signals:
+      - type: config-change
+        patterns: ["**/*.tf", "**/*.tfvars"]
+
+  docker:
+    name: Docker
+    detect_files:
+      - "**/Dockerfile"
+      - "docker-compose*.yml"
+    detect_content:
+      - "^FROM\\s+"
+    preflight_checks:
+      - id: docker-layer-order
+        title: Dependency install after source copy
+        pattern: "COPY of source code before dependency install (`COPY . .` before `npm install` / `go mod download`)"
+        failure_mode: "Every code change invalidates the dependency cache → slow builds, wasted CI time"
+        fix: "Copy dependency manifests first, install, then copy source: `COPY go.mod . && RUN go mod download && COPY . .`"
+        lens: maintainability
+        severity: concern
+
+      - id: docker-no-healthcheck
+        title: Missing HEALTHCHECK
+        pattern: "Dockerfile without `HEALTHCHECK` instruction — orchestrator can't detect unhealthy containers"
+        failure_mode: "Container runs but service is broken → traffic routed to dead container, user-facing errors"
+        fix: "Add `HEALTHCHECK CMD curl -f http://localhost:PORT/health || exit 1`"
+        lens: operability
+        severity: concern
+
+    focus_areas:
+      - area: "Image size"
+        description: "Is the image using a minimal base? Are build artifacts excluded from the final stage?"
+        lens: performance
+
+      - area: "Build reproducibility"
+        description: "Are base images pinned? Could rebuilding tomorrow produce a different result?"
+        lens: operability
+
+    change_type_signals:
+      - type: config-change
+        patterns: ["**/Dockerfile", "docker-compose*.yml"]
+
+  github_actions:
+    name: GitHub Actions
+    detect_files:
+      - ".github/workflows/*.yml"
+    detect_content:
+      - "^on:"
+      - "runs-on:"
+    preflight_checks:
+      - id: gha-no-timeout
+        title: Job without timeout
+        pattern: "Job definition missing `timeout-minutes` — default is 6 hours"
+        failure_mode: "Stuck job burns CI minutes for hours — expensive, blocks merge queue"
+        fix: "Add `timeout-minutes: 15` (or appropriate) to every job"
+        lens: operability
+        severity: concern
+
+      - id: gha-deploy-no-rollback
+        title: Deploy without rollback path
+        pattern: "Deploy job that updates production but has no documented or automated rollback step"
+        failure_mode: "Bad deploy requires manual intervention to revert — extended outage"
+        fix: "Add rollback step or document manual rollback procedure; prefer blue-green or canary"
+        lens: operability
+        severity: concern
+
+    focus_areas:
+      - area: "Secret exposure"
+        description: "Are secrets referenced safely? Could they leak in logs, artifacts, or PR comments?"
+        lens: correctness
+
+      - area: "Runner security"
+        description: "Self-hosted runners on public repos? PRs from forks running with secrets?"
+        lens: correctness
+
+    change_type_signals:
+      - type: config-change
+        patterns: [".github/workflows/*.yml", ".github/actions/**/*.yml"]
+
+# =============================================================================
+# API PATTERNS
+# =============================================================================
+api:
+  openapi:
+    name: OpenAPI / REST
+    detect_files:
+      - "**/*openapi*.yaml"
+      - "**/*swagger*.yaml"
+    detect_content:
+      - "openapi:"
+    preflight_checks:
+      - id: api-breaking-change
+        title: Breaking API change
+        pattern: "Removed field, renamed field, changed field type, removed endpoint, or changed required→optional without versioning"
+        failure_mode: "Deployed clients break — 500 errors, deserialization failures, missing data"
+        fix: "Add new fields alongside old ones; deprecate before removing; use API versioning for breaking changes"
+        lens: architecture
+        severity: issue
+
+      - id: api-missing-pagination
+        title: List endpoint without pagination
+        pattern: "List endpoint that returns all results without pagination (offset/limit or cursor)"
+        failure_mode: "Response grows unbounded with data — slow responses, timeouts, client OOM"
+        fix: "Add pagination parameters with reasonable defaults and maximums"
+        lens: performance
+        severity: issue
+
+    focus_areas:
+      - area: "Backward compatibility"
+        description: "Will existing clients (mobile apps already on user devices) handle these changes?"
+        lens: architecture
+
+      - area: "Error response consistency"
+        description: "Do error responses follow the established format? Are status codes semantically correct?"
+        lens: maintainability
+
+    change_type_signals:
+      - type: api-contract
+        patterns: ["**/*openapi*.yaml", "**/*swagger*.yaml", "**/*.proto", "**/*.graphql"]
+
+  graphql:
+    name: GraphQL
+    detect_files:
+      - "**/*.graphql"
+      - "**/*.gql"
+    detect_content:
+      - "type Query"
+      - "type Mutation"
+    preflight_checks:
+      - id: gql-resolver-n-plus-one
+        title: N+1 in resolver
+        pattern: "Resolver fetches data per-item without DataLoader batching"
+        failure_mode: "Query for 50 items fires 50+ DB queries — slow response, DB overloaded"
+        fix: "Use DataLoader for batch loading; prefetch related data"
+        lens: performance
+        severity: issue
+
+      - id: gql-breaking-removal
+        title: Field removed without deprecation
+        pattern: "Field or type removed from schema without prior `@deprecated` period"
+        failure_mode: "Clients querying removed field get errors — silent breakage for mobile apps on old versions"
+        fix: "Mark `@deprecated(reason: '...')` first; remove after all clients have migrated"
+        lens: architecture
+        severity: issue
+
+    focus_areas:
+      - area: "Query complexity"
+        description: "Could a client construct a query that's expensive to resolve? Are depth/complexity limits in place?"
+        lens: performance
+
+    change_type_signals:
+      - type: api-contract
+        patterns: ["**/*.graphql", "**/*.gql"]
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+database:
+  sql_general:
+    name: SQL Databases
+    detect_files:
+      - "**/*.sql"
+      - "**/migrations/*.sql"
+    detect_content:
+      - "^CREATE TABLE"
+      - "^ALTER TABLE"
+    preflight_checks:
+      - id: sql-no-index
+        title: Query on unindexed column
+        pattern: "WHERE clause or JOIN on column without an index — especially on large tables"
+        failure_mode: "Full table scan → query time degrades linearly with data growth → eventual timeout"
+        fix: "Add index for columns used in WHERE, JOIN, and ORDER BY on large tables"
+        lens: performance
+        severity: concern
+
+      - id: sql-irreversible-migration
+        title: Irreversible migration
+        pattern: "Migration with `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` without a down/rollback migration"
+        failure_mode: "Cannot revert if deploy goes bad — data permanently lost, rollback requires backup restore"
+        fix: "Rename before dropping; create reversible migration; backup data before destructive changes"
+        lens: data-integrity
+        severity: issue
+
+      - id: sql-no-transaction
+        title: Multi-statement migration without transaction
+        pattern: "Migration with multiple DDL/DML statements not wrapped in `BEGIN`/`COMMIT`"
+        failure_mode: "Partial migration on failure — schema in inconsistent state, manual intervention required"
+        fix: "Wrap related statements in a transaction; note: some DDL (CREATE INDEX CONCURRENTLY) can't be transactional"
+        lens: data-integrity
+        severity: concern
+
+    focus_areas:
+      - area: "Lock contention"
+        description: "Could this migration lock tables during execution? Consider `ALTER TABLE ... ADD COLUMN` (fast) vs `ALTER TABLE ... ADD COLUMN ... DEFAULT` (may lock on old Postgres)."
+        lens: performance
+
+      - area: "Data backfill safety"
+        description: "If backfilling data, is it batched? Could it timeout or conflict with live writes?"
+        lens: data-integrity
+
+    change_type_signals:
+      - type: database-migration
+        patterns: ["**/migrations/*.sql", "**/db/migrate/*.rb", "**/alembic/versions/*.py"]
+
+# =============================================================================
+# CROSS-CUTTING FOCUS AREAS
+# =============================================================================
+# These are not platform-specific. They apply to any codebase and prompt the
+# reviewer to think adversarially about consistency, bypass paths, and
+# assumptions. These focus areas exist because pattern-matching pre-flight
+# checks cannot catch inconsistencies between code paths — only active
+# adversarial analysis can.
+#
+# The generator emits these as a dedicated section in the generated skill,
+# separate from platform-specific focus areas.
+cross_cutting:
+  focus_areas:
+    - area: "Guard consistency across parallel code paths"
+      description: >
+        When multiple endpoints perform similar operations (e.g., two capture
+        endpoints, two import flows, two payment paths), verify they have the
+        SAME guards: auth checks, rate limits, billing/entitlement validation,
+        input validation, and audit logging. A missing guard on an alternative
+        path is a bypass. Compare every endpoint that touches a shared expensive
+        resource (LLM calls, payment processing, external API calls) and verify
+        parity.
+      lens: correctness
+      why: >
+        A P2 billing bypass was missed because one capture endpoint checked
+        entitlements while a parallel capture endpoint for a different mode
+        did not. This class of bug is invisible to single-endpoint analysis.
+
+    - area: "Restriction bypass via alternative paths"
+      description: >
+        For every restriction in the codebase (rate limit, billing gate, feature
+        flag, permission check, input size limit), ask: is there another code
+        path that reaches the same underlying operation without this restriction?
+        Check: Can a free-tier user reach a paid resource through a different
+        endpoint? Can an unauthenticated request reach an authenticated operation
+        via a public endpoint that proxies internally?
+      lens: correctness
+      why: >
+        Restrictions are often added to the first endpoint that needed them but
+        not retroactively applied when new endpoints are added that touch the
+        same resource.
+
+    - area: "Response format consistency"
+      description: >
+        Verify all endpoints follow the same response envelope format. If the
+        API uses `{data, error}` envelopes, check that EVERY endpoint wraps
+        its response — including new endpoints, error paths, and edge cases
+        like empty results. An inconsistent response breaks generic client
+        decoders.
+      lens: architecture
+      why: >
+        A work import endpoint returned raw JSON instead of the standard
+        envelope, breaking client deserialization.
+
+    - area: "Adversarial user behavior"
+      description: >
+        Think like a user who wants to abuse the system. What happens if they:
+        send the same request 1000 times? Use IDs from other users? Call
+        endpoints in unexpected order? Send maximum-length strings in every
+        field? Disconnect mid-request? Call deprecated endpoints? Use the API
+        directly instead of through the app?
+      lens: production-reliability
+      why: >
+        Many bugs only manifest under adversarial use patterns that normal
+        testing never exercises.
+
+    - area: "Nil/null guard on cross-service responses"
+      description: >
+        When service A calls service B and processes the response, verify that
+        A handles: nil/null response body, unexpected HTTP status, malformed
+        JSON, missing expected fields, and empty arrays vs null. A downstream
+        service returning an unexpected shape should not crash the caller.
+      lens: production-reliability
+      why: >
+        A nil response from an internal service caused a nil pointer dereference
+        in the BFF's forwardResponse function.
+
+    - area: "Orphaned resources on partial failure"
+      description: >
+        In multi-step operations (create A, then create B referencing A), what
+        happens if step 2 fails? Is resource A orphaned? Is there cleanup? Is
+        the failure surfaced to the user so they can retry? This is especially
+        important in stateless gateways that orchestrate across services without
+        transactions.
+      lens: data-integrity
+      why: >
+        A capture flow created a source note before the batch operation. When
+        the batch failed, the note was orphaned with no linked entities.

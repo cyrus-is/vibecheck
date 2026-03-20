@@ -1,0 +1,1395 @@
+# Security Guidance Reference
+# Platform-specific security checklists for security review skill generation.
+# Each entry contains detection signals and actionable checklist items that
+# reference specific APIs, functions, and patterns — not generic advice.
+#
+# Structure:
+#   category:
+#     platform_key:
+#       name: Human-readable name
+#       detect_files: List of files/globs that signal this platform
+#       detect_content: List of regex patterns in files that confirm the platform
+#       checklist: List of specific, actionable security items
+#         - id: unique identifier
+#           title: Short title
+#           pattern: What to look for (the vulnerable code pattern)
+#           secure_alternative: What should be done instead
+#           owasp: OWASP category reference
+#           severity_if_found: Default severity when found (CRITICAL/HIGH/MEDIUM/LOW)
+
+# =============================================================================
+# BACKEND LANGUAGES
+# =============================================================================
+backend:
+  go:
+    name: Go
+    detect_files:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+    detect_content:
+      - "^module\\s+"
+    checklist:
+      - id: go-sql-injection
+        title: SQL injection via string formatting
+        pattern: "`fmt.Sprintf` or string concatenation used to build SQL queries"
+        secure_alternative: "Use parameterized queries: `db.Query(query, args...)` or `db.Exec(query, args...)`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: go-err-shadow
+        title: Error variable shadowing
+        pattern: "Inner-scope `:=` creates new `err` that shadows outer `err` — outer error check passes on wrong value"
+        secure_alternative: "Use `=` assignment for inner errors or use distinct variable names (`err2`, `innerErr`)"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: HIGH
+
+      - id: go-goroutine-leak
+        title: Goroutine leak via fire-and-forget
+        pattern: "`go func()` without context cancellation, timeout, or WaitGroup"
+        secure_alternative: "Pass `context.Context` with timeout; use `errgroup.Group` or `sync.WaitGroup` for lifecycle management"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: go-race-condition
+        title: Shared state without synchronization
+        pattern: "Map, slice, or struct field accessed from multiple goroutines without `sync.Mutex`, `sync.RWMutex`, or channels"
+        secure_alternative: "Use `sync.Mutex`/`sync.RWMutex` to guard shared state, or use channels for communication"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: HIGH
+
+      - id: go-byte-json-base64
+        title: "[]byte JSONB base64 encoding"
+        pattern: "`[]byte` field (often from sqlc JSONB columns) gets base64-encoded by `json.Marshal` — clients receive gibberish"
+        secure_alternative: "Use `json.RawMessage` instead of `[]byte` for JSONB fields, or decode base64 on the client"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: go-ssrf
+        title: SSRF via user-supplied URL
+        pattern: "User input passed directly to `http.Get`, `http.Post`, or `http.NewRequest` without URL validation"
+        secure_alternative: "Validate URL against an allowlist of hosts/schemes; block internal IPs (127.0.0.1, 169.254.x.x, 10.x.x.x)"
+        owasp: "A10:2021 SSRF"
+        severity_if_found: HIGH
+
+      - id: go-path-traversal
+        title: Path traversal via user input
+        pattern: "User-supplied filename passed to `os.Open`, `os.ReadFile`, `filepath.Join` without sanitization"
+        secure_alternative: "Use `filepath.Clean` + verify result is within allowed base directory; reject paths containing `..`"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: go-tls-skip-verify
+        title: TLS certificate verification disabled
+        pattern: "`InsecureSkipVerify: true` in `tls.Config`"
+        secure_alternative: "Remove `InsecureSkipVerify` or set to `false`; use proper CA certificates"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+      - id: go-weak-rand
+        title: Weak random for security-sensitive operations
+        pattern: "`math/rand` used for tokens, secrets, or session IDs"
+        secure_alternative: "Use `crypto/rand` for security-sensitive randomness"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+      - id: go-pii-logs
+        title: PII in log statements
+        pattern: "`slog`, `log`, or `fmt.Printf` logging raw request bodies, auth responses, emails, phone numbers, or tokens"
+        secure_alternative: "Log only non-sensitive identifiers (user ID, request ID); redact or omit PII fields"
+        owasp: "A09:2021 Security Logging and Monitoring Failures"
+        severity_if_found: MEDIUM
+
+      - id: go-unbounded-read
+        title: Unbounded request body read
+        pattern: "`io.ReadAll(r.Body)` without `http.MaxBytesReader` — allows memory exhaustion via large payloads"
+        secure_alternative: "Wrap with `http.MaxBytesReader(w, r.Body, maxBytes)` before reading"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: go-template-injection
+        title: Template injection via user input
+        pattern: "User input interpolated into `template.HTML` or `template.JS` types, bypassing auto-escaping"
+        secure_alternative: "Never cast user input to `template.HTML`; let `html/template` auto-escape"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+  python:
+    name: Python
+    detect_files:
+      - "requirements.txt"
+      - "pyproject.toml"
+      - "setup.py"
+      - "Pipfile"
+      - "**/*.py"
+    detect_content:
+      - "^from\\s+\\w+\\s+import"
+    checklist:
+      - id: py-sql-injection
+        title: SQL injection via string formatting
+        pattern: "f-strings, `.format()`, or `%` formatting used to build SQL queries"
+        secure_alternative: "Use parameterized queries: `cursor.execute(query, params)` or ORM query builders"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: py-pickle-untrusted
+        title: Deserialization of untrusted data via pickle
+        pattern: "`pickle.loads()`, `pickle.load()`, or `shelve.open()` on user-supplied or network data"
+        secure_alternative: "Use `json` for data interchange; if pickle is required, use `hmac` signing to verify integrity"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: py-eval-exec
+        title: Code execution via eval/exec
+        pattern: "`eval()`, `exec()`, or `compile()` called with user-controlled input"
+        secure_alternative: "Use `ast.literal_eval()` for safe literal parsing; redesign to avoid dynamic code execution"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: py-subprocess-shell
+        title: Shell injection via subprocess
+        pattern: "`subprocess.call/run/Popen` with `shell=True` and user input in the command string"
+        secure_alternative: "Use `shell=False` (default) with argument list: `subprocess.run(['cmd', arg1, arg2])`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: py-yaml-load
+        title: Arbitrary code execution via YAML
+        pattern: "`yaml.load(data)` without `Loader=SafeLoader` — default loader allows arbitrary Python object instantiation"
+        secure_alternative: "Use `yaml.safe_load(data)` or `yaml.load(data, Loader=yaml.SafeLoader)`"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: py-ssrf
+        title: SSRF via user-supplied URL
+        pattern: "`requests.get/post()` or `urllib.request.urlopen()` with user-controlled URL"
+        secure_alternative: "Validate URL scheme (https only) and host against allowlist; block RFC1918/loopback addresses"
+        owasp: "A10:2021 SSRF"
+        severity_if_found: HIGH
+
+      - id: py-secret-in-code
+        title: Hardcoded secrets
+        pattern: "API keys, passwords, or tokens assigned as string literals in Python source"
+        secure_alternative: "Use environment variables (`os.environ`) or a secrets manager"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: py-weak-hash
+        title: Weak hashing for passwords
+        pattern: "`hashlib.md5()` or `hashlib.sha1()` used for password hashing"
+        secure_alternative: "Use `bcrypt`, `argon2-cffi`, or `hashlib.scrypt()` for password hashing"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+      - id: py-temp-file-race
+        title: Temp file race condition
+        pattern: "`tempfile.mktemp()` (deprecated) — creates a name but not the file, allowing race conditions"
+        secure_alternative: "Use `tempfile.mkstemp()` or `tempfile.NamedTemporaryFile()` which atomically create the file"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: py-debug-mode
+        title: Debug mode in production
+        pattern: "`DEBUG = True` or `app.run(debug=True)` in non-test code"
+        secure_alternative: "Use environment variable: `DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'`"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: MEDIUM
+
+      - id: py-regex-dos
+        title: ReDoS via catastrophic backtracking
+        pattern: "User input matched against regex with nested quantifiers like `(a+)+`, `(a|a)*`, `(.*a){x}`"
+        secure_alternative: "Use `re2` library or audit regex for polynomial/exponential complexity; add timeout with `regex` library"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+  java:
+    name: Java
+    detect_files:
+      - "pom.xml"
+      - "build.gradle"
+      - "build.gradle.kts"
+      - "**/*.java"
+    detect_content:
+      - "^package\\s+[a-z]"
+    checklist:
+      - id: java-sql-injection
+        title: SQL injection via string concatenation
+        pattern: "String concatenation in `Statement.execute()` or `createQuery()` instead of `PreparedStatement`"
+        secure_alternative: "Use `PreparedStatement` with `?` placeholders or JPA `@Query` with `:param` named parameters"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: java-deserialization
+        title: Unsafe Java deserialization
+        pattern: "`ObjectInputStream.readObject()` on untrusted data — enables arbitrary code execution via gadget chains"
+        secure_alternative: "Use JSON/protobuf instead; if Java serialization is required, use `ObjectInputFilter` (JEP 290)"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: java-xxe
+        title: XML External Entity (XXE) injection
+        pattern: "`DocumentBuilderFactory`, `SAXParserFactory`, or `XMLInputFactory` without disabling external entities"
+        secure_alternative: "Set `factory.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)` and disable external entities"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: CRITICAL
+
+      - id: java-path-traversal
+        title: Path traversal
+        pattern: "User input passed to `new File()`, `Paths.get()`, or `FileInputStream` without canonicalization"
+        secure_alternative: "Use `Path.normalize()` then verify `path.startsWith(basePath)`; reject inputs containing `..`"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: java-weak-crypto
+        title: Weak cryptographic algorithm
+        pattern: "`Cipher.getInstance('DES')`, `Cipher.getInstance('RC4')`, or `MessageDigest.getInstance('MD5')` for security purposes"
+        secure_alternative: "Use `AES/GCM/NoPadding` for encryption, `SHA-256`+ for hashing, `PBKDF2`/`bcrypt`/`argon2` for passwords"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+      - id: java-log-injection
+        title: Log injection
+        pattern: "User input passed directly to `logger.info()`, `logger.error()`, etc. without sanitization — enables log forging"
+        secure_alternative: "Use parameterized logging: `logger.info('User: {}', userId)` and strip newlines from user input"
+        owasp: "A09:2021 Security Logging and Monitoring Failures"
+        severity_if_found: MEDIUM
+
+      - id: java-spring-csrf
+        title: CSRF protection disabled in Spring Security
+        pattern: "`http.csrf().disable()` or `csrf(csrf -> csrf.disable())` in security config"
+        secure_alternative: "Keep CSRF enabled for session-based auth; only disable for stateless JWT-only APIs"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+      - id: java-null-cipher
+        title: NullCipher or ECB mode
+        pattern: "`new NullCipher()` or `Cipher.getInstance('AES/ECB/...')` — ECB mode leaks patterns in ciphertext"
+        secure_alternative: "Use `AES/GCM/NoPadding` or `AES/CBC/PKCS5Padding` with random IV"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+      - id: java-regex-dos
+        title: ReDoS via Pattern
+        pattern: "`Pattern.compile()` with nested quantifiers on user input without timeout"
+        secure_alternative: "Audit regex complexity; use `Matcher` with a timeout thread or limit input length"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+  node:
+    name: Node.js / JavaScript
+    detect_files:
+      - "package.json"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+    detect_content:
+      - "\"express\""
+      - "\"fastify\""
+      - "\"koa\""
+      - "\"hapi\""
+    checklist:
+      - id: node-prototype-pollution
+        title: Prototype pollution
+        pattern: "Deep merge/extend of user-controlled objects without prototype checks (e.g., `lodash.merge`, `Object.assign` with parsed JSON)"
+        secure_alternative: "Use `Object.create(null)` for lookup objects; validate keys against `__proto__`, `constructor`, `prototype`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: node-child-process
+        title: Command injection via child_process
+        pattern: "`child_process.exec()` with user input in the command string"
+        secure_alternative: "Use `child_process.execFile()` or `spawn()` with argument array (no shell interpolation)"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: node-eval
+        title: Code injection via eval
+        pattern: "`eval()`, `new Function()`, or `vm.runInNewContext()` with user-controlled input"
+        secure_alternative: "Redesign to avoid dynamic code execution; use `JSON.parse()` for data parsing"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: node-nosql-injection
+        title: NoSQL injection
+        pattern: "User input passed directly as MongoDB query object: `db.find({ user: req.body.user })` — `$gt`, `$ne` operators injected"
+        secure_alternative: "Validate/cast input types explicitly; use `mongo-sanitize` or schema validation (Joi/Zod)"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: node-path-traversal
+        title: Path traversal
+        pattern: "User input in `fs.readFile`, `fs.createReadStream`, or `path.join` without sanitization"
+        secure_alternative: "Use `path.resolve(baseDir, userInput)` then verify `resolvedPath.startsWith(baseDir)`"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: node-ssrf
+        title: SSRF via user-supplied URL
+        pattern: "`fetch()`, `axios.get()`, or `http.request()` with user-controlled URL"
+        secure_alternative: "Parse URL and validate host against allowlist; block private IP ranges"
+        owasp: "A10:2021 SSRF"
+        severity_if_found: HIGH
+
+      - id: node-jwt-none
+        title: JWT algorithm confusion
+        pattern: "`jwt.verify(token, secret)` without specifying `algorithms` option — accepts `alg: 'none'`"
+        secure_alternative: "`jwt.verify(token, secret, { algorithms: ['HS256'] })` — always specify allowed algorithms"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: CRITICAL
+
+      - id: node-regex-dos
+        title: ReDoS via user input
+        pattern: "`new RegExp(userInput)` or complex regex with nested quantifiers on user data"
+        secure_alternative: "Escape user input with a regex escape function; use `re2` library for untrusted patterns"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: node-open-redirect
+        title: Open redirect
+        pattern: "`res.redirect(req.query.url)` or `res.redirect(req.body.returnUrl)` without validation"
+        secure_alternative: "Validate redirect URL starts with `/` (relative) or matches allowed domains"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+  rust:
+    name: Rust
+    detect_files:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "**/*.rs"
+    detect_content:
+      - "^\\[package\\]"
+    checklist:
+      - id: rust-unsafe-block
+        title: Unsafe block usage
+        pattern: "`unsafe { }` blocks — review for UB, null pointer deref, buffer overflows, aliasing violations"
+        secure_alternative: "Minimize unsafe scope; document invariants; consider safe abstractions or crates that encapsulate unsafety"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: rust-unwrap-panic
+        title: Unwrap/expect on untrusted input
+        pattern: "`.unwrap()` or `.expect()` on `Result`/`Option` from user input, network, or file I/O — panics in production"
+        secure_alternative: "Use `?` operator, `match`, or `.unwrap_or_default()` for error handling on untrusted input"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: rust-sql-format
+        title: SQL injection via format!
+        pattern: "`format!()` or string interpolation used to build SQL queries"
+        secure_alternative: "Use query builder with bind params: `sqlx::query('SELECT * WHERE id = $1').bind(id)`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: rust-unchecked-index
+        title: Unchecked array/slice indexing
+        pattern: "Direct index access `arr[i]` on untrusted index without bounds check — panics on out-of-bounds"
+        secure_alternative: "Use `.get(i)` which returns `Option`, or validate bounds before indexing"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: rust-command-injection
+        title: Command injection
+        pattern: "`std::process::Command::new('sh').arg('-c').arg(user_input)` — shell interpretation of user data"
+        secure_alternative: "Pass arguments individually: `Command::new('prog').arg(user_input)` (no shell expansion)"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: rust-crypto-rand
+        title: Weak random for security
+        pattern: "`rand::thread_rng()` for tokens or secrets — not cryptographically secure by default in all contexts"
+        secure_alternative: "Use `rand::rngs::OsRng` or `getrandom` crate for cryptographic randomness"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+  csharp:
+    name: "C# / .NET"
+    detect_files:
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "**/*.cs"
+    detect_content:
+      - "^using\\s+System"
+      - "<Project Sdk=\"Microsoft"
+    checklist:
+      - id: cs-sql-injection
+        title: SQL injection via string concatenation
+        pattern: "String concatenation in `SqlCommand` or EF `FromSqlRaw`/`ExecuteSqlRaw` instead of parameterized queries"
+        secure_alternative: "Use `SqlCommand` with `SqlParameter`, or EF `FromSqlInterpolated`/`ExecuteSqlInterpolated`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: cs-deserialization
+        title: Unsafe deserialization
+        pattern: "`BinaryFormatter.Deserialize()`, `NetDataContractSerializer`, or `JavaScriptSerializer` on untrusted data"
+        secure_alternative: "Use `System.Text.Json` or `Newtonsoft.Json` with `TypeNameHandling.None` (default)"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: cs-xxe
+        title: XXE in XML parsing
+        pattern: "`XmlDocument` or `XmlReader` without `DtdProcessing.Prohibit` or `XmlResolver = null`"
+        secure_alternative: "Set `xmlDoc.XmlResolver = null` and `settings.DtdProcessing = DtdProcessing.Prohibit`"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: cs-path-traversal
+        title: Path traversal
+        pattern: "User input in `Path.Combine()` or `File.ReadAllText()` — `Path.Combine('base', '/etc/passwd')` returns `/etc/passwd`"
+        secure_alternative: "Use `Path.GetFullPath()` then verify result starts with allowed base directory"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: cs-ldap-injection
+        title: LDAP injection
+        pattern: "User input concatenated into LDAP filter strings for `DirectorySearcher`"
+        secure_alternative: "Escape special LDAP characters: `*`, `(`, `)`, `\\`, NUL using RFC 4515 encoding"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: cs-cors-wildcard
+        title: CORS wildcard with credentials
+        pattern: "`AllowAnyOrigin()` combined with `AllowCredentials()` in CORS policy"
+        secure_alternative: "Use `WithOrigins(allowedOrigins)` when credentials are enabled"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+  ruby:
+    name: Ruby
+    detect_files:
+      - "Gemfile"
+      - "Gemfile.lock"
+      - "**/*.rb"
+      - "Rakefile"
+    detect_content:
+      - "^gem\\s+['\"]rails['\"]"
+    checklist:
+      - id: ruby-mass-assignment
+        title: Mass assignment
+        pattern: "Model accepts all params without `strong_parameters` permit — `params` passed directly to `.create` or `.update`"
+        secure_alternative: "Use `params.require(:model).permit(:field1, :field2)` in controllers"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: ruby-sql-injection
+        title: SQL injection
+        pattern: "String interpolation in `.where(\"name = '#{params[:name]}'\")` or `.order(params[:sort])`"
+        secure_alternative: "Use parameterized form: `.where(name: params[:name])` or `.where('name = ?', params[:name])`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: ruby-command-injection
+        title: Command injection via backticks/system
+        pattern: "Backticks, `system()`, `exec()`, or `%x{}` with user-interpolated strings"
+        secure_alternative: "Use `system('cmd', arg1, arg2)` array form (no shell expansion) or `Open3.capture3`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: ruby-render-inline
+        title: XSS via render inline
+        pattern: "`render inline:` or `render html:` with user-controlled content without `html_escape`"
+        secure_alternative: "Use ERB templates (auto-escaped) or `ERB::Util.html_escape()` for inline rendering"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: ruby-yaml-load
+        title: Unsafe YAML deserialization
+        pattern: "`YAML.load(user_data)` — allows arbitrary Ruby object instantiation"
+        secure_alternative: "Use `YAML.safe_load(data)` or `YAML.safe_load(data, permitted_classes: [...])`"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: ruby-open-redirect
+        title: Open redirect
+        pattern: "`redirect_to params[:url]` or `redirect_to request.referer` without validation"
+        secure_alternative: "Validate URL is relative or matches allowed hosts; use `URI.parse` to check host"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+  php:
+    name: PHP
+    detect_files:
+      - "composer.json"
+      - "**/*.php"
+      - "artisan"
+    detect_content:
+      - "^<\\?php"
+      - "\"laravel/framework\""
+    checklist:
+      - id: php-sql-injection
+        title: SQL injection
+        pattern: "Variables interpolated in `mysqli_query()`, `$pdo->query()`, or raw `DB::select()` strings"
+        secure_alternative: "Use prepared statements: `$pdo->prepare($sql)->execute([$param])` or Eloquent query builder"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: php-file-inclusion
+        title: Local/remote file inclusion
+        pattern: "`include`, `require`, `include_once` with user-controlled path; `allow_url_include` enabled"
+        secure_alternative: "Whitelist allowed files; never use user input in include paths; disable `allow_url_include`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: php-eval
+        title: Code execution
+        pattern: "`eval()`, `assert()`, `preg_replace` with `/e` modifier, or `create_function()` with user input"
+        secure_alternative: "Remove dynamic code execution; use specific functions or data-driven logic instead"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: php-xss
+        title: XSS via unescaped output
+        pattern: "`echo $variable`, `<?= $var ?>` without `htmlspecialchars()` — especially in Blade: `{!! $var !!}`"
+        secure_alternative: "Use `htmlspecialchars($var, ENT_QUOTES, 'UTF-8')` or Blade `{{ $var }}` (auto-escaped)"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: php-deserialization
+        title: Unsafe deserialization
+        pattern: "`unserialize()` on user-controlled data — enables object injection via magic methods"
+        secure_alternative: "Use `json_decode()` for data interchange; if unserialize needed, use `allowed_classes` option"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: CRITICAL
+
+      - id: php-file-upload
+        title: Unrestricted file upload
+        pattern: "File upload handling without MIME type validation, extension whitelist, or storage outside webroot"
+        secure_alternative: "Validate MIME type, whitelist extensions, store outside webroot, use random filenames"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: HIGH
+
+# =============================================================================
+# WEB FRAMEWORKS
+# =============================================================================
+web:
+  react:
+    name: React / Next.js
+    detect_files:
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "next.config.js"
+      - "next.config.mjs"
+      - "next.config.ts"
+    detect_content:
+      - "\"react\""
+      - "\"next\""
+      - "from 'react'"
+    checklist:
+      - id: react-xss
+        title: XSS via dangerouslySetInnerHTML
+        pattern: "`dangerouslySetInnerHTML={{ __html: userContent }}` without DOMPurify sanitization"
+        secure_alternative: "Sanitize with `DOMPurify.sanitize(html)` before rendering, or avoid raw HTML entirely"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: react-localstorage-secrets
+        title: Secrets in localStorage
+        pattern: "Auth tokens, API keys, or sensitive data stored in `localStorage` or `sessionStorage` — accessible to XSS"
+        secure_alternative: "Use `httpOnly` cookies for auth tokens; keep sensitive data server-side"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: react-href-injection
+        title: JavaScript URL injection
+        pattern: "`<a href={userInput}>` without validating scheme — allows `javascript:alert(1)` URLs"
+        secure_alternative: "Validate URL starts with `https://`, `http://`, or `/`; reject `javascript:` and `data:` schemes"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: react-ssr-data-leak
+        title: Sensitive data in SSR/hydration payload
+        pattern: "API keys, tokens, or user PII embedded in `getServerSideProps`/`getStaticProps` return or `__NEXT_DATA__` JSON"
+        secure_alternative: "Only return data needed for rendering; keep secrets in API routes or server-only code"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: react-env-exposure
+        title: Environment variables exposed to client
+        pattern: "`NEXT_PUBLIC_*` or `REACT_APP_*` env vars containing secrets — bundled into client JavaScript"
+        secure_alternative: "Only prefix env vars with `NEXT_PUBLIC_`/`REACT_APP_` if they're safe to expose; keep secrets server-side"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: react-open-redirect
+        title: Open redirect
+        pattern: "`window.location = params.get('redirect')` or `router.push(userInput)` without validation"
+        secure_alternative: "Validate redirect target is a relative path or matches allowed domains"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+      - id: react-cors-proxy
+        title: Permissive CORS proxy
+        pattern: "Next.js API route or rewrites proxying requests to user-specified origins"
+        secure_alternative: "Hardcode allowed backend origins in proxy config; never proxy to user-supplied URLs"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+  vue:
+    name: Vue.js
+    detect_files:
+      - "**/*.vue"
+      - "nuxt.config.ts"
+      - "nuxt.config.js"
+    detect_content:
+      - "\"vue\""
+      - "\"nuxt\""
+    checklist:
+      - id: vue-v-html
+        title: XSS via v-html
+        pattern: "`v-html` directive with user-controlled content — renders raw HTML without escaping"
+        secure_alternative: "Use `{{ interpolation }}` (auto-escaped) or sanitize with DOMPurify before `v-html`"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: vue-url-injection
+        title: Dynamic URL injection
+        pattern: "`:href='userInput'` or `:src='userInput'` binding with unvalidated user data"
+        secure_alternative: "Validate URL scheme against allowlist; reject `javascript:` and `data:` protocols"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: vue-ssr-state-leak
+        title: SSR state serialization leak
+        pattern: "Sensitive data in Nuxt `asyncData`/`useFetch` or Pinia store serialized to `__NUXT_DATA__`"
+        secure_alternative: "Filter sensitive fields before returning from server-side data fetching"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+  angular:
+    name: Angular
+    detect_files:
+      - "angular.json"
+      - "**/*.component.ts"
+      - "**/*.module.ts"
+    detect_content:
+      - "\"@angular/core\""
+    checklist:
+      - id: angular-bypass-security
+        title: Security bypass APIs
+        pattern: "`bypassSecurityTrustHtml()`, `bypassSecurityTrustUrl()`, `bypassSecurityTrustScript()` with user data"
+        secure_alternative: "Avoid bypass methods; use Angular's built-in sanitization; sanitize with DOMPurify if bypass is required"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+      - id: angular-innerhtml
+        title: XSS via innerHTML binding
+        pattern: "`[innerHTML]='userContent'` — Angular sanitizes by default but complex HTML may bypass it"
+        secure_alternative: "Prefer text interpolation `{{ }}` when possible; audit that sanitizer handles the specific HTML patterns"
+        owasp: "A03:2021 Injection"
+        severity_if_found: MEDIUM
+
+      - id: angular-http-interception
+        title: Missing auth interceptor
+        pattern: "HTTP calls via `HttpClient` to protected endpoints without an auth interceptor attaching tokens"
+        secure_alternative: "Implement `HttpInterceptor` that adds auth headers to outgoing requests"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: MEDIUM
+
+# =============================================================================
+# MOBILE PLATFORMS
+# =============================================================================
+mobile:
+  ios:
+    name: iOS (Swift/SwiftUI)
+    detect_files:
+      - "**/*.swift"
+      - "**/*.xcodeproj"
+      - "**/project.yml"
+      - "**/*.pbxproj"
+    detect_content:
+      - "import SwiftUI"
+      - "import UIKit"
+    checklist:
+      - id: ios-keychain-vs-userdefaults
+        title: Sensitive data in UserDefaults
+        pattern: "Tokens, keys, PII stored in `UserDefaults` — plaintext on disk, included in backups"
+        secure_alternative: "Use Keychain Services (`SecItemAdd`/`SecItemCopyMatching`) or a Keychain wrapper"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: ios-ats-exception
+        title: App Transport Security exceptions
+        pattern: "`NSAllowsArbitraryLoads = true` or domain-specific ATS exceptions in Info.plist"
+        secure_alternative: "Remove ATS exceptions; ensure all API endpoints use HTTPS with valid certificates"
+        owasp: "M5:2024 Insecure Communication"
+        severity_if_found: MEDIUM
+
+      - id: ios-deeplink-validation
+        title: Deep link parameter injection
+        pattern: "URL scheme or universal link handler that acts on URL parameters without validation"
+        secure_alternative: "Validate and sanitize all URL parameters; prefer universal links (AASA) over custom URL schemes"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+      - id: ios-background-snapshot
+        title: Sensitive data in background screenshot
+        pattern: "Sensitive data visible when app enters background — no masking in `applicationDidEnterBackground` or `sceneDidEnterBackground`"
+        secure_alternative: "Overlay a blur/splash screen in `willResignActive` to hide sensitive content from task switcher"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: LOW
+
+      - id: ios-clipboard-exposure
+        title: Sensitive data on clipboard
+        pattern: "PII or secrets copied to `UIPasteboard.general` — accessible to all apps"
+        secure_alternative: "Use `UIPasteboard` with `ExpirationDate` or local-only pasteboard"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: MEDIUM
+
+      - id: ios-webview-js
+        title: WebView JavaScript bridge exploitation
+        pattern: "`WKWebView` with `javaScriptEnabled` loading untrusted URLs; `addScriptMessageHandler` exposing native APIs"
+        secure_alternative: "Validate loaded URLs against allowlist; minimize APIs exposed via message handlers"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+      - id: ios-hardcoded-secrets
+        title: Hardcoded secrets in source
+        pattern: "API keys, client secrets, or tokens as string literals in Swift files or plists"
+        secure_alternative: "Use Keychain for runtime secrets; use server-side config or build-time injection via xcconfig"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: ios-biometric-bypass
+        title: Biometric auth bypass
+        pattern: "`LAContext.evaluatePolicy` used as a UI gate without Keychain access control backing — can be bypassed by hooking"
+        secure_alternative: "Store secrets with `kSecAttrAccessControl` + `.biometryCurrentSet` so Keychain enforces biometric"
+        owasp: "M3:2024 Insecure Authentication"
+        severity_if_found: HIGH
+
+      - id: ios-pii-logging
+        title: PII in logs
+        pattern: "`print()`, `NSLog()`, or `os_log` with user data (email, phone, tokens, location)"
+        secure_alternative: "Log only non-sensitive identifiers; use `OSLogPrivacy` privacy annotations"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: MEDIUM
+
+  android:
+    name: Android (Kotlin/Java)
+    detect_files:
+      - "**/build.gradle.kts"
+      - "**/build.gradle"
+      - "**/AndroidManifest.xml"
+      - "**/*.kt"
+    detect_content:
+      - "android {"
+      - "com.android.application"
+    checklist:
+      - id: android-shared-prefs
+        title: Secrets in unencrypted SharedPreferences
+        pattern: "Tokens, keys, PII in `SharedPreferences` — plaintext XML on disk"
+        secure_alternative: "Use `EncryptedSharedPreferences` (AES256) from AndroidX Security library"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: android-exported-component
+        title: Exported component without permission
+        pattern: "Activity/Service/Receiver with `exported=true` (or missing `exported` on API 31+) and no `permission` attribute"
+        secure_alternative: "Set `exported=false` unless external access is required; add `android:permission` for protected components"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+      - id: android-intent-spoofing
+        title: Implicit intent for sensitive operations
+        pattern: "Implicit `Intent()` used for internal navigation or to pass sensitive data between components"
+        secure_alternative: "Use explicit intents (`Intent(context, TargetActivity::class.java)`) for internal communication"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: MEDIUM
+
+      - id: android-pending-intent-mutable
+        title: Mutable PendingIntent
+        pattern: "`PendingIntent.getActivity/Service/Broadcast` without `FLAG_IMMUTABLE` — receiving app can modify the intent"
+        secure_alternative: "Add `PendingIntent.FLAG_IMMUTABLE` unless the intent must be mutable for inline replies etc."
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: MEDIUM
+
+      - id: android-cleartext-traffic
+        title: Cleartext traffic allowed
+        pattern: "`android:usesCleartextTraffic='true'` in manifest or `cleartextTrafficPermitted='true'` in network security config"
+        secure_alternative: "Set to `false`; use HTTPS for all network communication"
+        owasp: "M5:2024 Insecure Communication"
+        severity_if_found: MEDIUM
+
+      - id: android-webview-js-bridge
+        title: WebView JavaScript bridge
+        pattern: "`setJavaScriptEnabled(true)` + `addJavascriptInterface()` on WebView loading untrusted content"
+        secure_alternative: "Validate loaded URLs; minimize exposed interface methods; use `@JavascriptInterface` annotation"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+      - id: android-backup-exposure
+        title: Backup exposure
+        pattern: "`android:allowBackup='true'` without `android:fullBackupContent` exclusion rules"
+        secure_alternative: "Set `allowBackup=false` or define `fullBackupContent` XML excluding sensitive files"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: MEDIUM
+
+      - id: android-hardcoded-secrets
+        title: Hardcoded secrets
+        pattern: "API keys or tokens in Kotlin source, `BuildConfig`, `strings.xml`, or `gradle.properties`"
+        secure_alternative: "Use Android Keystore for runtime secrets; inject via CI/build-time environment variables"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: android-deeplink-validation
+        title: Deep link parameter injection
+        pattern: "`<intent-filter>` with `<data>` elements that don't validate URI parameters before navigating or performing actions"
+        secure_alternative: "Parse and validate all deep link URI parameters; use Navigation component's safe args"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+  react_native:
+    name: React Native
+    detect_files:
+      - "react-native.config.js"
+      - "metro.config.js"
+      - "app.json"
+    detect_content:
+      - "\"react-native\""
+    checklist:
+      - id: rn-asyncstorage-secrets
+        title: Secrets in AsyncStorage
+        pattern: "Tokens, keys, PII stored in `AsyncStorage` — unencrypted on both platforms"
+        secure_alternative: "Use `react-native-keychain` or `expo-secure-store` for sensitive data"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: rn-deeplink-injection
+        title: Deep link injection
+        pattern: "`Linking.addEventListener` handler acts on URL params without validation"
+        secure_alternative: "Validate and sanitize all deep link parameters before navigation or action"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+      - id: rn-bridge-exposure
+        title: Native bridge method exposure
+        pattern: "Native modules exposed to JS via `@ReactMethod` without authorization checks"
+        secure_alternative: "Add caller validation in native modules; don't expose filesystem/network/crypto primitives directly"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: MEDIUM
+
+  flutter:
+    name: Flutter (Dart)
+    detect_files:
+      - "pubspec.yaml"
+      - "**/*.dart"
+    detect_content:
+      - "flutter:"
+      - "sdk: flutter"
+    checklist:
+      - id: flutter-shared-prefs-secrets
+        title: Secrets in SharedPreferences
+        pattern: "Tokens or keys stored via `shared_preferences` package — plaintext on both platforms"
+        secure_alternative: "Use `flutter_secure_storage` which uses Keychain (iOS) and EncryptedSharedPreferences (Android)"
+        owasp: "M9:2024 Insecure Data Storage"
+        severity_if_found: HIGH
+
+      - id: flutter-cert-pinning
+        title: Missing certificate pinning
+        pattern: "`http` or `dio` package making API calls without certificate pinning"
+        secure_alternative: "Implement `SecurityContext` with trusted certificates or use `dio_pinning_helper`"
+        owasp: "M5:2024 Insecure Communication"
+        severity_if_found: MEDIUM
+
+      - id: flutter-webview-js
+        title: WebView XSS
+        pattern: "`WebView` widget with `javascriptMode: JavascriptMode.unrestricted` loading user-controlled URLs"
+        secure_alternative: "Validate URLs against allowlist; use `NavigationDelegate` to restrict navigation"
+        owasp: "M1:2024 Improper Platform Usage"
+        severity_if_found: HIGH
+
+# =============================================================================
+# INFRASTRUCTURE & CI/CD
+# =============================================================================
+infrastructure:
+  terraform:
+    name: Terraform
+    detect_files:
+      - "**/*.tf"
+      - "**/*.tfvars"
+    detect_content:
+      - "^resource\\s+\""
+      - "^provider\\s+\""
+    checklist:
+      - id: tf-public-s3
+        title: Public S3 bucket
+        pattern: "`acl = 'public-read'` or missing `block_public_access` on `aws_s3_bucket`"
+        secure_alternative: "Add `aws_s3_bucket_public_access_block` with all four settings `true`"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: tf-permissive-sg
+        title: Overly permissive security group
+        pattern: "Ingress rule with `cidr_blocks = ['0.0.0.0/0']` on non-web ports (anything except 80, 443)"
+        secure_alternative: "Restrict ingress to specific CIDR blocks or security group references"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: tf-permissive-iam
+        title: Overly permissive IAM policy
+        pattern: "`Action = '*'` or `Resource = '*'` in IAM policy statements"
+        secure_alternative: "Follow least-privilege: specify exact actions and resource ARNs"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: tf-unencrypted-storage
+        title: Unencrypted storage
+        pattern: "RDS, EBS, S3, or DynamoDB resources without encryption configuration"
+        secure_alternative: "Enable encryption: `storage_encrypted = true` (RDS), `encrypted = true` (EBS), SSE (S3)"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: MEDIUM
+
+      - id: tf-hardcoded-secrets
+        title: Secrets in Terraform files
+        pattern: "Passwords, API keys, or tokens as plaintext string values in `.tf` or `.tfvars` files"
+        secure_alternative: "Use `aws_secretsmanager_secret`, `data.vault_generic_secret`, or environment variables"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: CRITICAL
+
+      - id: tf-missing-logging
+        title: Missing audit logging
+        pattern: "AWS resources (ALB, S3, RDS) without access logging or CloudTrail configuration"
+        secure_alternative: "Enable access logs on ALBs, S3 server access logging, RDS audit logging"
+        owasp: "A09:2021 Security Logging and Monitoring Failures"
+        severity_if_found: MEDIUM
+
+      - id: tf-public-rds
+        title: Publicly accessible RDS
+        pattern: "`publicly_accessible = true` on `aws_db_instance`"
+        secure_alternative: "Set `publicly_accessible = false`; access via private subnets or bastion host"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: CRITICAL
+
+  kubernetes:
+    name: Kubernetes
+    detect_files:
+      - "**/Chart.yaml"
+      - "**/kustomization.yaml"
+      - "**/helmfile.yaml"
+      - "**/k8s/**/*.yaml"
+      - "**/kubernetes/**/*.yaml"
+      - "**/manifests/**/*.yaml"
+      - "**/deploy/**/*.yaml"
+    detect_content:
+      - "^apiVersion:\\s+apps/"
+      - "^kind:\\s+(Deployment|StatefulSet|DaemonSet)"
+    checklist:
+      - id: k8s-privileged-container
+        title: Privileged container
+        pattern: "`securityContext.privileged: true` or `allowPrivilegeEscalation: true`"
+        secure_alternative: "Set `privileged: false`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: k8s-run-as-root
+        title: Container running as root
+        pattern: "Missing `runAsNonRoot: true` or explicit `runAsUser: 0` in pod security context"
+        secure_alternative: "Set `runAsNonRoot: true` and `runAsUser: 1000` (or appropriate non-root UID)"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: MEDIUM
+
+      - id: k8s-secrets-plaintext
+        title: Secrets in plain manifests
+        pattern: "Passwords or tokens in `ConfigMap` data or hardcoded in pod spec `env` values"
+        secure_alternative: "Use `Secret` resources (base64), or external secrets operators (AWS SM, Vault)"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: k8s-no-resource-limits
+        title: Missing resource limits
+        pattern: "Containers without `resources.limits.cpu` and `resources.limits.memory`"
+        secure_alternative: "Set resource limits to prevent resource exhaustion attacks"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: LOW
+
+      - id: k8s-host-network
+        title: Host network/PID namespace
+        pattern: "`hostNetwork: true` or `hostPID: true` — container shares host's network stack or PID namespace"
+        secure_alternative: "Remove host namespace sharing unless absolutely required (monitoring agents, etc.)"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: k8s-latest-tag
+        title: Using :latest image tag
+        pattern: "Container image with `:latest` tag or no tag — unpinned, mutable"
+        secure_alternative: "Pin to specific SHA digest or immutable version tag"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: MEDIUM
+
+  docker:
+    name: Docker
+    detect_files:
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/.dockerignore"
+      - "docker-compose*.yml"
+      - "docker-compose*.yaml"
+    detect_content:
+      - "^FROM\\s+"
+    checklist:
+      - id: docker-run-as-root
+        title: Container runs as root
+        pattern: "No `USER` instruction in Dockerfile — defaults to root"
+        secure_alternative: "Add `RUN addgroup -S app && adduser -S app -G app` and `USER app` before CMD"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: MEDIUM
+
+      - id: docker-secrets-in-build
+        title: Secrets in build layer
+        pattern: "`COPY .env`, `ARG PASSWORD`, or `ENV API_KEY=` baking secrets into image layers"
+        secure_alternative: "Use Docker BuildKit secrets (`--secret`), multi-stage builds, or runtime env vars"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: docker-unpinned-base
+        title: Unpinned base image
+        pattern: "`FROM node:latest` or `FROM python:3` — mutable tags, supply chain risk"
+        secure_alternative: "Pin to digest: `FROM node:20-slim@sha256:abc...` or at minimum a specific version tag"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: MEDIUM
+
+      - id: docker-expose-all
+        title: Unnecessary port exposure
+        pattern: "Exposing debug ports (9229, 5005), database ports (5432, 3306), or management ports in production Dockerfile"
+        secure_alternative: "Only EXPOSE the application port; use docker-compose for dev-only port mappings"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: LOW
+
+  github_actions:
+    name: GitHub Actions
+    detect_files:
+      - ".github/workflows/*.yml"
+      - ".github/workflows/*.yaml"
+      - ".github/actions/**/*.yml"
+    detect_content:
+      - "^on:"
+      - "runs-on:"
+    checklist:
+      - id: gha-script-injection
+        title: Script injection via event context
+        pattern: "`${{ github.event.issue.title }}`, `${{ github.event.pull_request.title }}`, or other user-controlled event fields in `run:` steps"
+        secure_alternative: "Pass event data via environment variable: `env: TITLE: ${{ github.event.issue.title }}` then use `$TITLE` in run"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: gha-unpinned-action
+        title: Unpinned third-party action
+        pattern: "Actions referenced by tag (`uses: actions/checkout@v4`) instead of SHA — tag can be moved to malicious commit"
+        secure_alternative: "Pin to full SHA: `uses: actions/checkout@abc123...` — immutable reference"
+        owasp: "A08:2021 Software and Data Integrity Failures"
+        severity_if_found: MEDIUM
+
+      - id: gha-excessive-permissions
+        title: Excessive workflow permissions
+        pattern: "`permissions: write-all` or no `permissions:` key (defaults to broad access)"
+        secure_alternative: "Set minimal `permissions:` per job: `contents: read`, `issues: write`, etc."
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+      - id: gha-secret-in-log
+        title: Secret leaked to logs
+        pattern: "`echo ${{ secrets.TOKEN }}` or secrets interpolated into `run:` commands that produce output"
+        secure_alternative: "Use `::add-mask::` for dynamic secrets; pass secrets as env vars, not inline"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: gha-self-hosted-risk
+        title: Self-hosted runner on public repo
+        pattern: "`runs-on: self-hosted` in a public repository — any PR can execute code on your infrastructure"
+        secure_alternative: "Use GitHub-hosted runners for public repos; restrict self-hosted to private repos with branch protection"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: HIGH
+
+      - id: gha-pull-request-target
+        title: Dangerous pull_request_target usage
+        pattern: "`on: pull_request_target` with `actions/checkout` of PR head — runs PR code with write permissions and secrets access"
+        secure_alternative: "Use `on: pull_request` for untrusted code; if `pull_request_target` is needed, never checkout PR head"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: CRITICAL
+
+  gitlab_ci:
+    name: GitLab CI
+    detect_files:
+      - ".gitlab-ci.yml"
+      - ".gitlab/**/*.yml"
+    detect_content:
+      - "^stages:"
+      - "^variables:"
+    checklist:
+      - id: gitlab-variable-exposure
+        title: CI variable exposure
+        pattern: "Variables without `masked: true` or `protected: true` — may leak in job logs or unprotected branches"
+        secure_alternative: "Set `masked: true` for secrets; `protected: true` for production credentials"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: gitlab-script-injection
+        title: Script injection via CI variables
+        pattern: "`$CI_COMMIT_TITLE`, `$CI_MERGE_REQUEST_TITLE`, or other user-controlled variables in `script:` without quoting"
+        secure_alternative: "Quote all variable references in scripts; validate format before use"
+        owasp: "A03:2021 Injection"
+        severity_if_found: HIGH
+
+# =============================================================================
+# API PATTERNS
+# =============================================================================
+api:
+  openapi:
+    name: OpenAPI / REST
+    detect_files:
+      - "**/*openapi*.yaml"
+      - "**/*openapi*.yml"
+      - "**/*openapi*.json"
+      - "**/*swagger*.yaml"
+      - "**/*swagger*.yml"
+      - "**/*swagger*.json"
+    detect_content:
+      - "openapi:"
+      - "swagger:"
+    checklist:
+      - id: api-missing-auth
+        title: Endpoints without authentication
+        pattern: "Path definitions missing `security:` requirement that should require auth"
+        secure_alternative: "Add `security: [BearerAuth: []]` or equivalent to all protected endpoints"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: api-missing-constraints
+        title: Missing input constraints
+        pattern: "String parameters without `maxLength`; integers without `maximum`; missing `pattern` on formatted fields"
+        secure_alternative: "Add `maxLength`, `maximum`, `minimum`, `pattern`, and `enum` constraints to all user input fields"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: api-pii-response
+        title: PII in response schema
+        pattern: "Response schemas returning internal IDs, email, phone, or other PII without documented purpose"
+        secure_alternative: "Only include fields needed by the client; document why PII fields are necessary"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: MEDIUM
+
+      - id: api-missing-error-responses
+        title: Missing error response definitions
+        pattern: "Endpoints missing 401, 403, 404, or 429 response definitions"
+        secure_alternative: "Define all relevant error responses; ensure auth/authz failures return appropriate status codes"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: LOW
+
+  graphql:
+    name: GraphQL
+    detect_files:
+      - "**/*.graphql"
+      - "**/*.gql"
+    detect_content:
+      - "type Query"
+      - "type Mutation"
+      - "graphql"
+    checklist:
+      - id: gql-introspection-prod
+        title: Introspection enabled in production
+        pattern: "GraphQL server allows introspection queries in production — exposes full schema to attackers"
+        secure_alternative: "Disable introspection in production: `introspection: process.env.NODE_ENV !== 'production'`"
+        owasp: "A05:2021 Security Misconfiguration"
+        severity_if_found: MEDIUM
+
+      - id: gql-depth-limit
+        title: Unbounded query depth
+        pattern: "No query depth limiting — allows deeply nested queries that cause exponential server load"
+        secure_alternative: "Use `graphql-depth-limit` or equivalent to cap query depth (typically 7-10 levels)"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: HIGH
+
+      - id: gql-complexity-limit
+        title: Unbounded query complexity
+        pattern: "No query complexity analysis — allows queries that resolve millions of objects"
+        secure_alternative: "Implement query cost analysis; reject queries exceeding complexity threshold"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: HIGH
+
+      - id: gql-batch-abuse
+        title: Batch query abuse
+        pattern: "GraphQL endpoint accepts arrays of queries without per-batch limits"
+        secure_alternative: "Limit batch size (e.g., max 10 operations per request)"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: gql-field-authz
+        title: Missing field-level authorization
+        pattern: "Resolver returns data without checking if the requesting user has access to that specific field/object"
+        secure_alternative: "Implement authorization checks in resolvers or use a directive-based auth layer"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+  grpc:
+    name: gRPC / Protocol Buffers
+    detect_files:
+      - "**/*.proto"
+      - "**/buf.yaml"
+      - "**/buf.gen.yaml"
+    detect_content:
+      - "^syntax = \"proto"
+      - "^service\\s+\\w+"
+    checklist:
+      - id: grpc-no-auth
+        title: Missing authentication on RPC
+        pattern: "gRPC service methods without interceptor/middleware enforcing authentication"
+        secure_alternative: "Add auth interceptor that validates tokens/credentials on all non-public RPCs"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: grpc-no-tls
+        title: gRPC without TLS
+        pattern: "`grpc.NewServer()` or `grpc.Dial` without TLS credentials — plaintext RPC"
+        secure_alternative: "Use `credentials.NewTLS()` for transport security"
+        owasp: "M5:2024 Insecure Communication"
+        severity_if_found: HIGH
+
+      - id: grpc-unbounded-message
+        title: Unbounded message size
+        pattern: "`grpc.MaxRecvMsgSize` set to very large value or not set (default 4MB is usually fine)"
+        secure_alternative: "Set reasonable max message sizes for both client and server"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: LOW
+
+# =============================================================================
+# DATABASE PATTERNS
+# =============================================================================
+database:
+  sql_general:
+    name: SQL Databases (general)
+    detect_files:
+      - "**/*.sql"
+      - "**/migrations/*.sql"
+    detect_content:
+      - "^CREATE TABLE"
+      - "^ALTER TABLE"
+    checklist:
+      - id: sql-no-tenant-scope
+        title: Missing tenant scoping
+        pattern: "Queries without `WHERE owner_user_id =` or `WHERE workspace_id =` in multi-tenant applications"
+        secure_alternative: "Include tenant scoping in every query; consider Row-Level Security (RLS) as defense-in-depth"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: sql-unbounded-select
+        title: Unbounded SELECT
+        pattern: "`SELECT * FROM table` without `LIMIT` clause on list/search endpoints"
+        secure_alternative: "Add `LIMIT` clause with reasonable maximum (e.g., 200); implement pagination"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: sql-migration-data-loss
+        title: Destructive migration without rollback
+        pattern: "`DROP TABLE`, `DROP COLUMN`, `TRUNCATE` in migrations without corresponding down/rollback migration"
+        secure_alternative: "Use reversible migrations; rename before dropping; backup data before destructive changes"
+        owasp: "A04:2021 Insecure Design"
+        severity_if_found: MEDIUM
+
+      - id: sql-sensitive-plaintext
+        title: Sensitive data stored in plaintext
+        pattern: "Columns storing passwords, SSN, credit cards without encryption — `VARCHAR` or `TEXT` type"
+        secure_alternative: "Use application-level encryption (AES-256-GCM) or database-level column encryption"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: HIGH
+
+  mongodb:
+    name: MongoDB
+    detect_files:
+      - "**/*mongo*"
+    detect_content:
+      - "mongoose"
+      - "MongoClient"
+      - "mongodb://"
+    checklist:
+      - id: mongo-injection
+        title: NoSQL injection
+        pattern: "User input passed directly as query filter — allows `$gt`, `$ne`, `$regex` operator injection"
+        secure_alternative: "Validate/cast input types; use schema validation (Mongoose schemas, JSON Schema validator)"
+        owasp: "A03:2021 Injection"
+        severity_if_found: CRITICAL
+
+      - id: mongo-no-auth
+        title: MongoDB without authentication
+        pattern: "Connection string without credentials or `authSource` — connects to unauthenticated instance"
+        secure_alternative: "Enable MongoDB authentication; use SCRAM-SHA-256; rotate credentials regularly"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: CRITICAL
+
+# =============================================================================
+# AUTH PATTERNS
+# =============================================================================
+auth:
+  jwt:
+    name: JWT Authentication
+    detect_files: []
+    detect_content:
+      - "jwt\\.sign"
+      - "jwt\\.verify"
+      - "jose"
+      - "jsonwebtoken"
+      - "JWTVerifier"
+      - "ParseWithClaims"
+    checklist:
+      - id: jwt-weak-secret
+        title: Weak JWT signing secret
+        pattern: "Short, predictable, or hardcoded JWT secret (e.g., `secret`, `password`, `key123`)"
+        secure_alternative: "Use 256+ bit random secret or RS256/ES256 key pair; load from environment/secrets manager"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: CRITICAL
+
+      - id: jwt-no-expiry
+        title: JWT without expiration
+        pattern: "JWT issued without `exp` claim — token valid forever if not revoked"
+        secure_alternative: "Set reasonable `exp` (15min for access tokens, 7d for refresh); implement token refresh flow"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
+
+      - id: jwt-alg-none
+        title: Algorithm confusion / none
+        pattern: "JWT verification without restricting allowed algorithms — accepts `alg: 'none'` or switches RS→HS"
+        secure_alternative: "Always specify `algorithms: ['RS256']` (or your chosen algorithm) in verify options"
+        owasp: "A02:2021 Cryptographic Failures"
+        severity_if_found: CRITICAL
+
+      - id: jwt-token-in-url
+        title: JWT in URL query parameter
+        pattern: "Token passed via URL query string — logged in server logs, browser history, referer headers"
+        secure_alternative: "Pass JWT in `Authorization: Bearer` header or secure httpOnly cookie"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: MEDIUM
+
+  oauth:
+    name: OAuth 2.0
+    detect_files: []
+    detect_content:
+      - "oauth"
+      - "client_secret"
+      - "authorization_code"
+      - "redirect_uri"
+    checklist:
+      - id: oauth-open-redirect
+        title: Open redirect via redirect_uri
+        pattern: "`redirect_uri` not validated against registered URIs — allows authorization code theft"
+        secure_alternative: "Exact-match `redirect_uri` against pre-registered URIs; no wildcards or partial matching"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: CRITICAL
+
+      - id: oauth-state-missing
+        title: Missing state parameter
+        pattern: "OAuth flow without `state` parameter — vulnerable to CSRF attacks"
+        secure_alternative: "Generate cryptographic random `state`, store in session, validate on callback"
+        owasp: "A01:2021 Broken Access Control"
+        severity_if_found: HIGH
+
+      - id: oauth-client-secret-exposed
+        title: Client secret in client-side code
+        pattern: "OAuth `client_secret` in frontend JavaScript, mobile app, or public repository"
+        secure_alternative: "Use PKCE flow for public clients (mobile/SPA); keep client_secret server-side only"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: CRITICAL
+
+      - id: oauth-pkce-missing
+        title: Missing PKCE for public clients
+        pattern: "Authorization code flow in SPA or mobile app without PKCE (`code_challenge`/`code_verifier`)"
+        secure_alternative: "Implement PKCE with S256 method for all public client OAuth flows"
+        owasp: "A07:2021 Identification and Authentication Failures"
+        severity_if_found: HIGH
