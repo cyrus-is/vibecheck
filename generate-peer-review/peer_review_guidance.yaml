@@ -1090,7 +1090,7 @@ cross_cutting:
   focus_areas:
     - area: "Guard consistency across parallel code paths"
       description: >
-        When multiple endpoints perform similar operations (e.g., two capture
+        When multiple endpoints perform similar operations (e.g., two upload
         endpoints, two import flows, two payment paths), verify they have the
         SAME guards: auth checks, rate limits, billing/entitlement validation,
         input validation, and audit logging. A missing guard on an alternative
@@ -1099,9 +1099,9 @@ cross_cutting:
         parity.
       lens: correctness
       why: >
-        A P2 billing bypass was missed because one capture endpoint checked
-        entitlements while a parallel capture endpoint for a different mode
-        did not. This class of bug is invisible to single-endpoint analysis.
+        A billing bypass was missed because one endpoint checked entitlements
+        while a parallel endpoint for a different mode did not. This class of
+        bug is invisible to single-endpoint analysis.
 
     - area: "Restriction bypass via alternative paths"
       description: >
@@ -1126,7 +1126,7 @@ cross_cutting:
         decoders.
       lens: architecture
       why: >
-        A work import endpoint returned raw JSON instead of the standard
+        An import endpoint returned raw JSON instead of the standard
         envelope, breaking client deserialization.
 
     - area: "Adversarial user behavior"
@@ -1150,7 +1150,7 @@ cross_cutting:
       lens: production-reliability
       why: >
         A nil response from an internal service caused a nil pointer dereference
-        in the BFF's forwardResponse function.
+        in the caller's response forwarding function.
 
     - area: "Orphaned resources on partial failure"
       description: >
@@ -1161,5 +1161,5 @@ cross_cutting:
         transactions.
       lens: data-integrity
       why: >
-        A capture flow created a source note before the batch operation. When
-        the batch failed, the note was orphaned with no linked entities.
+        A multi-step flow created a parent record before the batch operation.
+        When the batch failed, the parent was orphaned with no linked entities.
