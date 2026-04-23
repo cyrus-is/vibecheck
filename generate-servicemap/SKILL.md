@@ -58,9 +58,9 @@ That said, depth must be managed against context constraints. The phased approac
 Scan the repository structure to identify:
 
 - **Services**: Anything that runs independently. Heuristics: has its own Dockerfile, has a `package.json`
-  / `go.mod` / `Cargo.toml` / `pyproject.toml` / `build.gradle` / `pom.xml` with an entrypoint, has its
-  own Terraform module that provisions compute (ECS, Lambda, EC2, Cloud Run, etc.), or has its own
-  Kubernetes Deployment manifest.
+  / `go.mod` / `Cargo.toml` / `pyproject.toml` / `build.gradle` / `pom.xml` / `*.csproj` / `*.sln`
+  with an entrypoint, has its own Terraform module that provisions compute (ECS, Lambda, EC2, Cloud Run,
+  App Service, etc.), or has its own Kubernetes Deployment manifest.
 - **Apps**: Frontend applications, mobile apps, CLI tools. Distinguished from services by being
   user-facing rather than API-facing.
 - **Libraries**: Shared internal packages without their own entrypoint. Look for workspace members,
@@ -77,6 +77,40 @@ For each component discovered, record:
 
 Write the Phase 1 manifest to memory before proceeding. This is your roadmap for subsequent phases.
 
+### Phase 1b: Fallback Discovery — Unknown or Sparse Stacks
+
+If Phase 1 discovers fewer components than the repository structure suggests (e.g., a large repo with
+many directories but only 1-2 matched heuristics), or the repo uses a stack not covered by the
+heuristics above, run a fallback discovery pass:
+
+1. **Scan for generic service signals**:
+   - Entrypoint files: `main.*`, `app.*`, `server.*`, `Program.cs`, `Startup.cs`, `index.*`
+   - Build system files not already matched: `Makefile`, `CMakeLists.txt`, `*.csproj`, `*.sln`,
+     `*.fsproj`, `mix.exs`, `build.zig`, `dune-project`, `*.cabal`, `stack.yaml`
+   - Port exposure: `EXPOSE` in any Dockerfile, `ports:` in docker-compose, `listen` calls in source
+   - HTTP handler patterns: any file registering routes, handlers, or controllers
+   - Database connection patterns: connection strings, ORM config, migration directories
+
+2. **Reason from directory structure**: If a subdirectory has its own build file, its own entrypoint,
+   and its own source tree — it's likely a component even if you don't recognize the stack. Classify
+   it with lower confidence (0.4–0.6) and note the discovery method as "inferred from project
+   structure."
+
+3. **Flag unknown stacks**: For any component discovered via fallback, add a note in the component's
+   `discovery_method` field:
+   ```
+   "discovery_method": "Fallback: .csproj with Program.cs entrypoint — stack not in primary heuristics"
+   ```
+   This helps downstream consumers know where the map is less certain.
+
+4. **Self-heal suggestion**: At the end of the crawl, if fallback discovery found components, include
+   a message to the user:
+   ```
+   ⚠️ ENRICHMENT AVAILABLE: N components were discovered via fallback heuristics rather than
+   primary detection. Consider adding explicit heuristics for [stack] to improve future crawl
+   accuracy. Affected components: [list]
+   ```
+
 ## Phase 2: Deep Dive — Analyze Each Component
 
 **Goal**: For each component from Phase 1, extract detailed metadata.
@@ -86,18 +120,24 @@ Work through components one at a time (or in small batches if they're lightweigh
 ### Services and Apps
 
 - **Endpoints**: Trace route definitions. Look for Express/Koa/Hono routes, FastAPI/Flask/Django URL
-  patterns, Spring `@RequestMapping`, Go chi/mux/gin routes, Rails routes.rb, etc.
+  patterns, Spring `@RequestMapping`, Go chi/mux/gin routes, Rails routes.rb, ASP.NET `[Route]` /
+  `[ApiController]` / `[HttpGet]` / `[HttpPost]` attributes / `MapGet`/`MapPost` minimal APIs /
+  `Startup.cs`/`Program.cs` middleware pipeline, Phoenix router, etc.
   - For each endpoint: method, path, whether it's public or private (behind auth middleware),
     authentication mechanism (JWT, API key, OAuth, session, mTLS, none), authorization requirements
     (roles, scopes, policies).
 - **Dependencies — other services**: Trace HTTP client calls, gRPC stubs, SDK imports that point to
-  other internal services. Look for base URLs, service names in env vars, Kubernetes service DNS names.
-- **Dependencies — data stores**: Database connection strings/configs, ORM model definitions, cache
-  client instantiation, S3/blob storage client usage, message queue producer/consumer setup.
+  other internal services. Look for base URLs, service names in env vars, Kubernetes service DNS names,
+  `HttpClient` / `IHttpClientFactory` registrations (.NET), `Refit` interface definitions (.NET).
+- **Dependencies — data stores**: Database connection strings/configs, ORM model definitions (Entity
+  Framework `DbContext`, Dapper, ActiveRecord, SQLAlchemy, GORM, Prisma, etc.), cache client
+  instantiation, S3/blob storage client usage, message queue producer/consumer setup. For .NET,
+  check `appsettings.json` / `appsettings.*.json` for `ConnectionStrings` sections.
 - **Dependencies — external APIs**: Third-party SDK imports and API calls (Stripe, Twilio, SendGrid,
-  Auth0, Datadog, PagerDuty, etc.).
-- **Environment and config**: How config is loaded — env vars, config files, Vault references, AWS
-  Secrets Manager, Kubernetes ConfigMaps/Secrets. Catalog every env var referenced.
+  Auth0, Datadog, PagerDuty, etc.). For .NET, check NuGet package references in `*.csproj` files.
+- **Environment and config**: How config is loaded — env vars, config files (`appsettings.json`,
+  `application.yml`, `.env`, `config.toml`, etc.), Vault references, AWS Secrets Manager,
+  Kubernetes ConfigMaps/Secrets. Catalog every env var referenced.
 - **Observability**: Health check endpoints, logging framework, tracing instrumentation (OpenTelemetry,
   Datadog APM, Jaeger, Zipkin), metrics endpoints, alerting rules.
 - **Container config**: Dockerfile analysis — base image, exposed ports, build stages, runtime user.
