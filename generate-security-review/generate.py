@@ -37,7 +37,7 @@ class RepoAnalyzer:
     """Scans a repository to detect languages, frameworks, and infrastructure."""
 
     SKIP_DIRS = {
-        ".git", "node_modules", "vendor", "venv", ".venv", "__pycache__",
+        ".git", ".claude", "node_modules", "vendor", "venv", ".venv", "__pycache__",
         ".next", "build", "dist", "target", ".gradle", ".idea", ".vscode",
         "Pods", ".build", "DerivedData", ".terraform",
     }
@@ -184,6 +184,7 @@ class SkillGenerator:
                 ))
 
         sections.append(self._agentic_security_analysis())
+        sections.append(self._false_positive_filtering(detected))
         sections.append(self._output_format())
         sections.append(self._deep_review_section(service_map))
         sections.append(self._self_heal_section(all_known_platforms))
@@ -298,7 +299,8 @@ class SkillGenerator:
             6. **Run platform-specific checklists** — each match is a starting point; trace it
             7. **Agentic security analysis** — trace data flows, audit auth boundaries, chain findings, detect absences (see below)
             8. **Classify findings** by severity, considering blast radius from your threat model
-            9. **Self-heal check** — if the code touches platforms not covered by any checklist, flag them
+            9. **False positive filtering** — apply hard exclusions and precedent rules, assign confidence scores, discard findings below threshold (see below)
+            10. **Self-heal check** — if the code touches platforms not covered by any checklist, flag them
 
         """)
 
@@ -474,46 +476,205 @@ class SkillGenerator:
 
         """)
 
+    def _false_positive_filtering(self, detected: dict) -> str:
+        # Build platform-aware precedent rules
+        platform_keys = set(detected.keys())
+
+        memory_safe_langs = []
+        if "rust" in platform_keys:
+            memory_safe_langs.append("Rust")
+        if "go" in platform_keys:
+            memory_safe_langs.append("Go")
+        if "java" in platform_keys or "kotlin" in platform_keys:
+            memory_safe_langs.append("Java/Kotlin")
+        if "swift" in platform_keys:
+            memory_safe_langs.append("Swift")
+        if "csharp" in platform_keys:
+            memory_safe_langs.append("C#")
+
+        memory_safe_note = ""
+        if memory_safe_langs:
+            langs = ", ".join(memory_safe_langs)
+            memory_safe_note = (
+                f"\n- **Memory safety issues are not applicable to {langs}.** "
+                "Do not report buffer overflows, use-after-free, or similar memory "
+                "safety issues in memory-safe languages."
+            )
+
+        xss_safe_frameworks = []
+        if "react" in platform_keys or "nextjs" in platform_keys:
+            xss_safe_frameworks.append("React/Next.js")
+        if "vue" in platform_keys or "nuxt" in platform_keys:
+            xss_safe_frameworks.append("Vue/Nuxt")
+
+        xss_safe_note = ""
+        if xss_safe_frameworks:
+            fws = ", ".join(xss_safe_frameworks)
+            xss_safe_note = (
+                f"\n- **{fws} are generally safe against XSS.** Do not report XSS "
+                "in these frameworks unless the code uses `dangerouslySetInnerHTML`, "
+                "`v-html`, or similar explicit escape hatches."
+            )
+
+        client_side_note = ""
+        if any(k in platform_keys for k in ("react", "nextjs", "vue", "nuxt", "nodejs")):
+            client_side_note = (
+                "\n- **Client-side JS/TS code does not need permission checks or auth.** "
+                "Client-side code is untrusted — the server is responsible for validation "
+                "and authorization. Do not report missing auth in frontend code."
+            )
+
+        return textwrap.dedent(f"""\
+            ## False Positive Filtering
+
+            A security review that floods the report with noise is worse than no review.
+            Every finding must clear two gates: (1) it is not excluded by the rules below,
+            and (2) it has a concrete, exploitable attack path with confidence ≥ 0.8.
+
+            ### Hard Exclusions — Automatically Discard
+
+            Do NOT report findings that match any of these patterns, regardless of severity:
+
+            1. **Denial of Service (DoS)** — resource exhaustion, memory consumption, CPU
+               exhaustion, regex DoS, rate limiting gaps. These are operational concerns,
+               not security vulnerabilities in this context.
+            2. **Secrets stored on disk** — credentials in config files or env-file templates
+               are handled by other processes (secret scanning, pre-commit hooks). Only
+               report secrets hardcoded in source code that bypass these controls.
+            3. **Outdated dependencies** — vulnerable transitive deps are managed by
+               dependency scanning tools (Dependabot, Grype, OSV). Do not duplicate.
+            4. **Test-only code** — files that are exclusively unit tests, test fixtures,
+               or test utilities. Vulnerabilities in test code are not exploitable.
+            5. **Documentation files** — markdown, RST, or other docs. Insecure examples
+               in documentation are not vulnerabilities.
+            6. **Log spoofing** — outputting unsanitized user input to logs is not a
+               vulnerability unless it logs secrets or PII.
+            7. **Missing hardening measures** — the absence of a security best practice
+               is not a vulnerability. Only report concrete, exploitable weaknesses.
+            8. **Theoretical race conditions** — only report race conditions with a
+               concrete exploitation path and real impact, not theoretical timing windows.
+            9. **SSRF with path-only control** — SSRF is only reportable if the attacker
+               can control the host or protocol, not just the path.
+            10. **AI prompt injection** — including user-controlled content in AI system
+                prompts is not a vulnerability in this context.
+            11. **Regex injection** — injecting untrusted content into a regex pattern is
+                not a vulnerability.
+            12. **Missing audit logs** — absence of logging is an operational gap, not a
+                security vulnerability.{memory_safe_note}{xss_safe_note}{client_side_note}
+
+            ### Precedent Rules — Calibrate Severity
+
+            Apply these calibrations before scoring confidence:
+
+            - **Environment variables and CLI flags are trusted values.** Attacks that
+              require controlling an env var or CLI arg are invalid in a secure environment.
+            - **UUIDs are unguessable.** Do not flag missing UUID validation as an IDOR risk.
+            - **Logging URLs is safe.** Only flag logging of secrets, passwords, tokens, or PII.
+            - **GitHub Actions workflow vulns require concrete untrusted input paths.** Most
+              workflow injection scenarios are not exploitable in practice — only report with
+              a specific, demonstrated attack path.
+            - **Shell script command injection requires untrusted input.** Shell scripts
+              generally run with trusted input — only report if untrusted user input
+              reaches a shell command with a concrete path.
+            - **Jupyter notebook vulns require concrete untrusted input.** Most notebook
+              code runs in trusted local environments.
+            - **Subtle web vulns need high confidence.** Tabnabbing, XS-Leaks, prototype
+              pollution, and open redirects should only be reported at confidence ≥ 0.9
+              with a clear exploitation path.
+            - **Non-PII data in logs is not a finding.** Only report logging vulns when
+              secrets, passwords, or personally identifiable information are exposed.
+            - **Local network exploitability is still valid.** A vulnerability exploitable
+              only from the local network can still be HIGH severity.
+
+            ### Confidence Scoring
+
+            Every finding MUST include a confidence score:
+
+            - **0.9–1.0**: Certain exploit path — you can describe exact steps to exploit
+            - **0.8–0.9**: Clear vulnerability pattern with known exploitation methods
+            - **0.7–0.8**: Suspicious pattern requiring specific conditions to exploit
+            - **Below 0.7**: Do not report — too speculative
+
+            **Discard all findings with confidence below 0.8.**
+
+            Only report HIGH and MEDIUM severity findings. A focused report with 3 real
+            findings is infinitely more valuable than a report with 20 speculative ones.
+
+            ### Multi-Pass Verification (Mode 1 and 2 only)
+
+            For branch diff and PR review modes, use a two-pass approach:
+
+            1. **Pass 1 — Discovery**: Identify all candidate findings using checklists
+               and agentic analysis. Cast a wide net.
+            2. **Pass 2 — Verification**: For each candidate, independently verify:
+               - Is it excluded by the hard exclusions above?
+               - Does it have a concrete, step-by-step exploit path?
+               - What is the confidence score after applying precedent rules?
+               - Would a security engineer confidently raise this in a PR review?
+            3. **Threshold**: Only findings that survive Pass 2 with confidence ≥ 0.8
+               appear in the final report.
+
+        """)
+
     def _output_format(self) -> str:
         return textwrap.dedent("""\
-            ## Output
+            ## Output Format
 
-            Present findings as:
+            **Verdict and summary go first.** The reader wants the answer before the details.
 
-            ### Security Review — `<branch-name or component-name>`
+            **Only report HIGH and MEDIUM findings.** LOW and INFO are excluded by the false
+            positive filtering rules. If no findings survive filtering, say so cleanly.
 
-            **Mode:** Diff / PR #N / Full Audit of `<component>`
-            **Files reviewed:** (list)
-            **Scope:** (what changed — new endpoints, auth changes, data handling, etc.)
-            **Platforms detected:** (list of matched platforms)
+            ### When no findings survive filtering:
 
-            #### Findings
+            ```
+            ## Security Review — `<branch-name or component-name>`
 
-            For each finding:
-            - **Severity:** CRITICAL/HIGH/MEDIUM/LOW/INFO
-            - **Category:** (OWASP category or specific domain)
-            - **Location:** file:line
-            - **Description:** what the issue is
-            - **Recommendation:** how to fix it
+            **Verdict: PASS** — no security-relevant findings.
+            ```
 
-            #### Summary
+            That's it. Do not produce empty sections or filler.
+
+            ### When findings exist:
+
+            ```
+            ## Security Review — `<branch-name or component-name>`
+
+            **Verdict:** PASS / BLOCK
+            **Findings:** N total (X CRITICAL, Y HIGH, Z MEDIUM)
+
+            ### Summary
+
+            <1-2 sentences: what was reviewed, overall security posture assessment>
+
+            ### Vuln 1: <category_slug> — `path/to/file:42`
+
+            * **Severity:** HIGH (0.9)
+            * **Description:** <one sentence — what the vulnerability is>
+            * **Exploit scenario:** <concrete steps an attacker would take to exploit this>
+            * **Recommendation:** <how to fix, with code snippet if helpful>
+
+            ### Vuln 2: <category_slug> — `path/to/file:87`
+
+            ...
+
+            ### Severity Summary
 
             | Severity | Count |
             |----------|-------|
             | CRITICAL | N     |
             | HIGH     | N     |
             | MEDIUM   | N     |
-            | LOW      | N     |
+            ```
 
-            **Verdict:** PASS (safe to merge) / BLOCK (must fix critical/high findings first)
+            **Category slugs** should be specific and machine-parseable: `sql_injection`,
+            `xss_reflected`, `auth_bypass`, `idor`, `ssrf`, `command_injection`,
+            `hardcoded_secret`, `jwt_validation`, `path_traversal`, `deserialization`,
+            `privilege_escalation`, `missing_auth`, `csrf`, `open_redirect`, etc.
 
-            If BLOCK: list the specific findings that must be addressed and suggest fixes.
-
-            If no security-relevant changes are found, state: "No security-relevant changes detected. PASS."
-
-            **Note:** For Mode 2 (PR review), do NOT auto-post findings as a PR comment — security
-            findings may contain sensitive details. Output to terminal and let the user decide
-            whether to share.
+            **Note:** For Mode 2 (PR review), do NOT auto-post findings as a PR comment —
+            security findings may contain sensitive details. Output to terminal only and
+            let the user decide whether to share.
 
         """)
 
@@ -657,8 +818,13 @@ class SkillGenerator:
 
             ### Output for Mode 4
 
+            Verdict first, then details. Omit sections with no findings.
+
             ```
             ## Deep Repository Security Audit
+
+            **Verdict:** PASS / BLOCK
+            **Findings:** N total (X CRITICAL, Y HIGH, Z MEDIUM)
 
             ### Threat Landscape
             <High-level security posture — 2-3 sentences>
@@ -667,7 +833,8 @@ class SkillGenerator:
             <Visual: client → gateway → services → DB, with auth at each boundary>
 
             ### Critical Attack Chains
-            <Multi-step exploit paths that combine findings>
+            <Multi-step exploit paths that combine findings — each as a numbered vuln
+            with category slug, severity, confidence, exploit scenario, and fix>
 
             ### Authorization Matrix Gaps
             <Endpoints missing auth/authz, defense-in-depth failures>
@@ -684,15 +851,12 @@ class SkillGenerator:
             ### Cross-Service Findings
             <Issues that span multiple components>
 
-            ### Per-Severity Summary
+            ### Severity Summary
             | Severity | Count |
             |----------|-------|
             | CRITICAL | N     |
             | HIGH     | N     |
             | MEDIUM   | N     |
-            | LOW      | N     |
-
-            **Verdict:** PASS / BLOCK
             ```
 
         """)

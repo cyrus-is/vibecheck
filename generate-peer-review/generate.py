@@ -35,7 +35,7 @@ import yaml
 
 class RepoAnalyzer:
     SKIP_DIRS = {
-        ".git", "node_modules", "vendor", "venv", ".venv", "__pycache__",
+        ".git", ".claude", "node_modules", "vendor", "venv", ".venv", "__pycache__",
         ".next", "build", "dist", "target", ".gradle", ".idea", ".vscode",
         "Pods", ".build", "DerivedData", ".terraform",
     }
@@ -520,36 +520,57 @@ class SkillGenerator:
         return textwrap.dedent("""\
             ## Output Format
 
-            For **Mode 2 (PR review)**: post a single comment on the PR using `gh pr comment <number> --body "$(cat <<'COMMENT' ... COMMENT)"`.
+            **Verdict and summary go first.** The reader wants the answer before the details.
 
-            For **Mode 1 and 3**: output directly to terminal.
+            For **Mode 2 (PR review)**: post a single comment on the PR using
+            `gh pr comment <number> --body "$(cat <<'COMMENT' ... COMMENT)"`.
 
-            Structure:
+            For **Mode 1, 3, and 4**: output directly to terminal.
+
+            ### When no issues are found:
 
             ```
             ## Principal Engineer Code Review
 
             **PR:** #<number> — <title>  (omit for Mode 1 and 3)
-            **Verdict:** APPROVE / REQUEST CHANGES / DISCUSS
+            **Verdict: APPROVE** — no issues found.
+            ```
+
+            That's it. Do not produce empty sections or filler. A clean review is valuable.
+
+            ### When issues are found:
+
+            ```
+            ## Principal Engineer Code Review
+
+            **PR:** #<number> — <title>  (omit for Mode 1 and 3)
+            **Verdict:** APPROVE / APPROVE with concerns / DISCUSS / REQUEST CHANGES
+            **Findings:** N total (X ISSUE, Y CONCERN)
             **Components touched:** <list>
             **Change type(s):** <from modifiers, if any>
-
-            ### Pre-flight Check Results
-
-            | Check | Result | Notes |
-            |-------|--------|-------|
-            | [platform-specific checks] | PASS/FAIL | ... |
-            (only include checks relevant to the files reviewed)
 
             ### Summary
 
             <1-2 sentences: what this change does and overall assessment>
 
+            ### Pre-flight Checks
+
+            <N of M pre-flight checks triggered.>
+
+            | Check | Notes |
+            |-------|-------|
+            | [only checks that triggered] | ... |
+
+            (Only show checks that found something. Do not list passing checks.)
+
             ### Findings
 
             For each issue found:
-            - **File:** `path/to/file:42`
+
+            #### Finding 1: `path/to/file:42`
+
             - **Lens:** <which of the 8 lenses>
+            - **Rating:** ISSUE / CONCERN
             - **Intent:** What the author was trying to accomplish
             - **Risk:** Why this is risky or buggy
             - **Failure mode:** How this will break in production
@@ -567,15 +588,12 @@ class SkillGenerator:
             | Operability | PASS/CONCERN/ISSUE | ... |
             | Performance | PASS/CONCERN/ISSUE | ... |
             | Maintainability | PASS/CONCERN/ISSUE | ... |
-
-            ### Verdict
-
-            <Final recommendation with rationale>
             ```
 
-            If the code is clean, say so — don't manufacture findings. "No issues found, APPROVE" is a valid and valuable review.
+            Do not manufacture findings. If the code is clean, APPROVE it.
 
-            File all findings as GitHub issues using `gh issue create` with appropriate priority labels (P1/P2/P3) and component labels. Reference the PR number in each issue (for Mode 2).
+            **GitHub issues are opt-in.** Do NOT auto-file GitHub issues for findings.
+            Only create issues if the user explicitly asks (e.g., `/peercodereview 123 --file-issues`).
 
         """)
 
@@ -705,13 +723,16 @@ class SkillGenerator:
 
             ### Output for Mode 4
 
-            Structure the deep review as:
+            Verdict first, then details. Omit sections with no findings.
 
             ```
             ## Deep Repository Review
 
+            **Verdict:** HEALTHY / CONCERNS / ACTION REQUIRED
+            **Findings:** N total (X systemic, Y per-component, Z nitpicks)
+
             ### Executive Summary
-            <High-level "State of the Union" — overall health and biggest systemic risks>
+            <2-3 sentences: overall health and biggest systemic risks>
 
             ### Critical Systemic Findings
             <Issues that span multiple components or affect data integrity across flows>
@@ -730,9 +751,6 @@ class SkillGenerator:
 
             ### Positive Patterns Worth Spreading
             <Things one service does well that others should adopt>
-
-            ### The Nitpicks
-            <Style, minor optimizations, DX improvements>
             ```
 
         """)
