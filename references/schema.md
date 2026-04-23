@@ -1,6 +1,6 @@
 # servicemap.json Schema Reference
 
-**Schema Version**: 1.0.0
+**Schema Version**: 1.1.0
 
 This document defines the complete schema for `servicemap.json`. Downstream skills and applications
 can depend on this structure. Fields marked **(required)** must always be present. Fields marked
@@ -10,9 +10,9 @@ can depend on this structure. Fields marked **(required)** must always be presen
 
 ```json
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "generated_at": "2026-03-14T12:00:00Z",
-  "repository": { },
+  "repositories": [ ],
   "components": [ ],
   "connections": [ ],
   "metadata": { }
@@ -23,14 +23,19 @@ can depend on this structure. Fields marked **(required)** must always be presen
 |-------|------|----------|-------------|
 | `schema_version` | string | yes | Semver version of this schema. Consumers should check major version for compatibility. |
 | `generated_at` | string (ISO 8601) | yes | Timestamp of when this map was last generated or updated. |
-| `repository` | object | yes | Information about the source repository. |
+| `repositories` | array | yes | All source repositories that have contributed to this map. (Replaces singular `repository` from 1.0.) |
 | `components` | array | yes | All discovered components (services, apps, libraries, infra, pipelines, data stores, external). |
 | `connections` | array | yes | All traced relationships between components. |
 | `metadata` | object | yes | Crawl metadata and summary statistics. |
 
+**Migration from 1.0**: If `repository` (singular object) is present instead of `repositories` (array),
+wrap it in an array: `"repositories": [<old repository object>]`.
+
 ---
 
-## repository
+## repositories[]
+
+Each entry represents a source repository that has been crawled into this map.
 
 ```json
 {
@@ -38,17 +43,19 @@ can depend on this structure. Fields marked **(required)** must always be presen
   "url": "https://github.com/org/my-platform",
   "default_branch": "main",
   "monorepo": true,
-  "description": "Primary platform monorepo"
+  "description": "Primary platform monorepo",
+  "last_crawled": "2026-03-14T12:00:00Z"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | yes | Repository name. |
+| `name` | string | yes | Repository name. Used as the value for `source_repo` on components. |
 | `url` | string | optional | Remote URL if discoverable from git config. |
 | `default_branch` | string | optional | Default branch name. |
 | `monorepo` | boolean | yes | Whether this repo contains multiple independently deployable components. |
 | `description` | string | optional | Human-readable description. Supports `manual_override`. |
+| `last_crawled` | string (ISO 8601) | yes | When this repository was last crawled. Used to assess staleness. |
 
 ---
 
@@ -61,6 +68,7 @@ Every component shares these base fields regardless of type.
   "id": "svc-user-api",
   "name": "user-api",
   "type": "service",
+  "source_repo": "my-platform",
   "path": "services/user-api",
   "description": "Handles user registration, authentication, and profile management",
   "language": "typescript",
@@ -84,6 +92,7 @@ Every component shares these base fields regardless of type.
 | `id` | string | yes | Unique identifier. Convention: `{type_prefix}-{name}`. Prefixes: `svc-`, `app-`, `lib-`, `infra-`, `pipeline-`, `datastore-`, `ext-`. |
 | `name` | string | yes | Human-readable name. |
 | `type` | enum | yes | One of: `service`, `app`, `library`, `infrastructure`, `pipeline`, `datastore`, `external`. |
+| `source_repo` | string | yes | Name of the repository this component was discovered in. Must match a `name` in `repositories[]`. Null for stubs not yet resolved to a repo. |
 | `path` | string | yes (except stubs) | Path relative to repo root. Null for external/stub components. |
 | `description` | string | optional | What this component does. Supports `manual_override`. |
 | `language` | string | optional | Primary language (lowercase): `typescript`, `python`, `go`, `rust`, `java`, `kotlin`, `ruby`, `csharp`, etc. |
@@ -95,7 +104,7 @@ Every component shares these base fields regardless of type.
 | `last_crawled` | string (ISO 8601) | yes | When this component was last analyzed. |
 | `stub` | boolean | yes | True if this component was referenced but not found in the crawled repo. |
 | `stub_reason` | string | conditional | Required when `stub: true`. Why this is a stub (e.g., "Referenced in env var SERVICE_URL but no matching service found in repo"). |
-| `stale` | boolean | optional | True if this component existed in a previous map but was not found in the latest crawl. |
+| `stale` | boolean | optional | True if this component was not found in its `source_repo` during the most recent crawl of that repo. Components are never marked stale by crawls of *other* repos. |
 | `stale_since` | string (ISO 8601) | conditional | Required when `stale: true`. When this component was first marked stale. |
 | `manual_override` | boolean | optional | If true, this component's fields are preserved during incremental updates. Defaults to false. |
 | `tags` | array of strings | optional | Freeform tags for categorization. |
@@ -303,7 +312,7 @@ Every component shares these base fields regardless of type.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `engine` | string | yes | `postgresql`, `mysql`, `mongodb`, `redis`, `dynamodb`, `s3`, `elasticsearch`, `kafka`, `sqs`, `sns`, `rabbitmq`, `memcached`, etc. |
+| `engine` | string | yes | Use the actual service name, not cross-cloud equivalents. **Databases:** `postgresql`, `mysql`, `mssql`, `mongodb`, `cosmosdb`, `dynamodb`, `redis`, `memcached`, `elasticsearch`, `sqlite`. **Object storage:** `s3`, `azure-blob-storage`, `gcs`. **Queues/messaging:** `sqs`, `sns`, `azure-queue-storage`, `azure-service-bus`, `google-pubsub`, `kafka`, `rabbitmq`, `nats`. **Table/KV stores:** `dynamodb`, `azure-table-storage`, `google-bigtable`. **Never map Azure→AWS or vice versa** (e.g., Azure Blob is NOT `s3`, Azure Service Bus is NOT `sqs`). |
 | `version` | string | optional | Engine version. |
 | `managed_by` | string | optional | Component ID of the IaC that provisions this store. |
 | `connection_pattern` | string | optional | `direct`, `pooled`, `orm`, `sdk`. |
@@ -467,6 +476,20 @@ with no observability fields is a blind spot.
     {"component": "svc-user-api", "endpoint": "POST /api/v1/auth/login"}
   ],
   "unmonitored_services": ["svc-legacy-worker"],
+  "repo_staleness": [
+    {
+      "repo": "my-platform",
+      "last_crawled": "2026-03-14T12:00:00Z",
+      "components": 18,
+      "age_days": 0
+    },
+    {
+      "repo": "notification-service",
+      "last_crawled": "2026-03-01T10:00:00Z",
+      "components": 5,
+      "age_days": 13
+    }
+  ],
   "crawl_duration_phases": {
     "phase_1_discovery": "12s",
     "phase_2_deep_dive": "3m 42s",
@@ -475,11 +498,13 @@ with no observability fields is a blind spot.
   },
   "incremental": {
     "is_incremental": true,
+    "repo_crawled": "my-platform",
     "previous_generated_at": "2026-03-10T08:00:00Z",
     "components_added": 2,
     "components_removed": 0,
     "components_updated": 15,
     "components_marked_stale": 1,
+    "stubs_resolved": 0,
     "manual_overrides_preserved": 3
   }
 }
@@ -499,16 +524,16 @@ without traversing the full component/connection arrays.
 | `shared_datastores` | array | yes | IDs of datastores with `shared: true`. Architectural risk signal. |
 | `unauthenticated_public_endpoints` | array | yes | Endpoints with `public: true` and `authentication.mechanism: "none"`. Security signal. |
 | `unmonitored_services` | array | yes | Service/app IDs with empty or missing observability. Operational risk signal. |
+| `repo_staleness` | array | yes | Per-repo crawl age summary. Each entry: `repo` (name), `last_crawled` (ISO 8601), `components` (count from that repo), `age_days` (days since last crawl, computed at generation time). Sorted by `age_days` descending so the stalest repo is first. |
 | `crawl_duration_phases` | object | optional | Time spent in each crawl phase. |
-| `incremental` | object | optional | Present only for incremental updates. Summarizes what changed. |
+| `incremental` | object | optional | Present only for incremental updates. Summarizes what changed. `repo_crawled` identifies which repo was crawled in this run. `stubs_resolved` counts stubs that were replaced with full entries. |
 
 ---
 
 ## Stub Entries
 
-Stubs represent components that are referenced but not found in the crawled repo. They exist so
-the map shows the full dependency picture, with clear markers for what needs to be filled in from
-other repos.
+Stubs represent components that are referenced but not found in any crawled repo. They exist so
+the map shows the full dependency picture, with clear markers for what needs to be filled in.
 
 Minimum required fields for a stub:
 
@@ -517,6 +542,7 @@ Minimum required fields for a stub:
   "id": "svc-notification-service",
   "name": "notification-service",
   "type": "service",
+  "source_repo": null,
   "path": null,
   "confidence": 0.0,
   "discovery_method": "Referenced in env var NOTIFICATION_SERVICE_URL in svc-user-api",
@@ -526,8 +552,13 @@ Minimum required fields for a stub:
 }
 ```
 
-When running `/generateservicemap` on additional repos, stub entries should be matched by ID and
-replaced with full entries when the actual component is found.
+### Stub Resolution (Multi-Repo)
+
+When running `/generateservicemap` against a new repo that points to an existing servicemap:
+1. If a discovered component matches a stub by ID or name, the stub is **replaced** with the full
+   entry. The `source_repo` is set to the newly crawled repo. The `stub` field becomes `false`.
+2. The `stubs_resolved` count in `metadata.incremental` tracks how many stubs were resolved.
+3. Stubs that are not resolved remain unchanged — they are never deleted or marked stale.
 
 ---
 
@@ -535,7 +566,8 @@ replaced with full entries when the actual component is found.
 
 | Version | Status | Notes |
 |---------|--------|-------|
-| 1.0.0 | Current | Initial schema. |
+| 1.1.0 | Current | Multi-repo support: `repository` → `repositories[]`, `source_repo` on components, `repo_staleness` in metadata, scoped stale-marking. |
+| 1.0.0 | Deprecated | Initial schema. Single-repo only. |
 
 **Versioning rules:**
 - **Patch** (1.0.x): Clarifications, documentation fixes. No structural changes.

@@ -67,8 +67,14 @@ Scan the repository structure to identify:
   internal package references, monorepo package directories.
 - **Infrastructure**: Terraform/OpenTofu/Pulumi/CloudFormation directories. Each module or stack is a
   component.
-- **CI/CD Pipelines**: GitHub Actions workflows, GitLab CI, CircleCI, Jenkins, etc.
+- **CI/CD Pipelines**: GitHub Actions workflows, GitLab CI, CircleCI, Jenkins, etc. Scan ALL
+  workflow files, not just the obvious ones — repos often have 10-20+ workflows for linting,
+  security scanning, ephemeral environments, dependency updates, etc.
 - **Data stores**: Database migration directories, schema files, seed data.
+- **Utility containers**: Dockerfiles that don't fit the service/app pattern — migration runners,
+  reverse proxies, setup/initialization containers, database seed tools, static file servers.
+  Check `util/`, `tools/`, `scripts/`, `deploy/` directories and CI build matrices for Docker
+  images that are built and shipped but aren't traditional services. These are components too.
 
 For each component discovered, record:
 - `name`, `type`, `path` (relative to repo root), `language`, `framework`, `platform`
@@ -119,20 +125,33 @@ Work through components one at a time (or in small batches if they're lightweigh
 
 ### Services and Apps
 
-- **Endpoints**: Trace route definitions. Look for Express/Koa/Hono routes, FastAPI/Flask/Django URL
-  patterns, Spring `@RequestMapping`, Go chi/mux/gin routes, Rails routes.rb, ASP.NET `[Route]` /
-  `[ApiController]` / `[HttpGet]` / `[HttpPost]` attributes / `MapGet`/`MapPost` minimal APIs /
-  `Startup.cs`/`Program.cs` middleware pipeline, Phoenix router, etc.
-  - For each endpoint: method, path, whether it's public or private (behind auth middleware),
-    authentication mechanism (JWT, API key, OAuth, session, mTLS, none), authorization requirements
-    (roles, scopes, policies).
+- **Endpoints**: Trace route definitions by **reading the actual route attributes and registrations
+  in the source code**. Do NOT guess or infer route prefixes — read them. Common patterns:
+  - Express/Koa/Hono: `app.get('/path', ...)`, `router.post('/path', ...)`
+  - FastAPI/Flask/Django: `@app.get("/path")`, `urlpatterns`, `@api_view`
+  - Spring: `@RequestMapping("/path")`, `@GetMapping`, `@PostMapping`
+  - Go chi/mux/gin: `r.Get("/path", ...)`, `r.Route("/path", ...)`
+  - Rails: `routes.rb` — `resources`, `get`, `post`
+  - ASP.NET: `[Route("path")]`, `[ApiController]`, `[HttpGet]`, `[HttpPost]` — note that
+    the `[Route]` attribute on the controller IS the prefix, do not add `/api/v1/` or other
+    prefixes unless they are explicitly in the attribute. Also check `MapGet`/`MapPost` minimal
+    APIs and `UseEndpoints` / `MapControllers` in `Program.cs`/`Startup.cs`.
+  - Phoenix: `scope "/api"`, `get "/path"`, `resources "/path"`
+  - For each endpoint: method, path (exactly as defined in code — include route constraints like
+    `{id:int}` and path parameters like `{organizationId}`), whether it's public or private
+    (behind auth middleware), authentication mechanism (JWT, API key, OAuth, session, mTLS, none),
+    authorization requirements (roles, scopes, policies).
 - **Dependencies — other services**: Trace HTTP client calls, gRPC stubs, SDK imports that point to
   other internal services. Look for base URLs, service names in env vars, Kubernetes service DNS names,
   `HttpClient` / `IHttpClientFactory` registrations (.NET), `Refit` interface definitions (.NET).
 - **Dependencies — data stores**: Database connection strings/configs, ORM model definitions (Entity
   Framework `DbContext`, Dapper, ActiveRecord, SQLAlchemy, GORM, Prisma, etc.), cache client
-  instantiation, S3/blob storage client usage, message queue producer/consumer setup. For .NET,
+  instantiation, object storage client usage, message queue producer/consumer setup. For .NET,
   check `appsettings.json` / `appsettings.*.json` for `ConnectionStrings` sections.
+  - **Use the actual cloud service name for `engine` types.** Azure Blob Storage is
+    `azure-blob-storage`, not `s3`. Azure Service Bus is `azure-service-bus`, not `sqs`.
+    Cosmos DB is `cosmosdb`, not `mongodb`. Never map one cloud provider's service to another's
+    equivalent. See the schema for the full list of valid engine values.
 - **Dependencies — external APIs**: Third-party SDK imports and API calls (Stripe, Twilio, SendGrid,
   Auth0, Datadog, PagerDuty, etc.). For .NET, check NuGet package references in `*.csproj` files.
 - **Environment and config**: How config is loaded — env vars, config files (`appsettings.json`,
@@ -185,7 +204,10 @@ This phase is where the map becomes genuinely valuable. Using the data from Phas
 4. **Infrastructure-to-service**: Map Terraform resources to the services they support (e.g.,
    `aws_ecs_service` → the service that runs on it).
 5. **Pipeline-to-service**: Map CI/CD workflows to the services they deploy.
-6. **Library-to-consumer**: Map internal library usage across all services.
+6. **Library-to-consumer**: Map internal library usage across all services. **Every library
+   relationship must be represented in two places**: (a) the library component's `consumers`
+   array AND (b) a corresponding entry in `connections[]` with `"type": "library"`. Do not
+   list a consumer without creating the connection, or vice versa. Verify consistency.
 
 For each connection:
 - `source`, `target`, `type` (http, grpc, graphql, queue, database, library, infrastructure)
@@ -193,6 +215,11 @@ For each connection:
 - `protocol_details`: method, path, queue name, topic, etc.
 - `auth_required`: what auth the connection uses
 - `confidence`: how certain you are this connection exists
+
+**Verify that every service listed in a datastore's `consumers` array actually connects to that
+datastore.** Read the service's startup/config code to confirm — do not assume a service uses a
+database just because a shared library provides database access. Only list services that directly
+establish a connection.
 
 ## Phase 4: Assemble and Validate
 
@@ -202,27 +229,76 @@ For each connection:
 2. **Validate completeness**: Every service discovered in Phase 1 should have a deep-dive entry from
    Phase 2 and connections from Phase 3. If any are missing, go back and fill them.
 3. **Identify stubs**: Any service, data store, or dependency referenced but NOT found in this repo
-   gets a stub entry with `"stub": true` and a `"stub_reason"` explaining what's missing. These are
-   the TODOs for multi-repo mapping.
-4. **Set timestamps**: `last_crawled` on every component and `generated_at` on the root.
-5. Write to the `--path` location.
+   (and not already present from another repo in an existing map) gets a stub entry with
+   `"stub": true` and a `"stub_reason"` explaining what's missing.
+4. **Set `source_repo`** on every component discovered in this crawl to the current repo name.
+5. **Set timestamps**: `last_crawled` on every component and `generated_at` on the root.
+6. **Merge with existing map** if one exists at the target path (see Multi-Repo and Incremental
+   Update Strategy below).
+7. Write to the `--path` location.
 
-## Incremental Update Strategy
+## Multi-Repo and Incremental Update Strategy
 
-When an existing `servicemap.json` is found at the target path:
+The servicemap supports multiple repositories in a single map. Each component tracks which repo
+it came from via `source_repo`. When an existing `servicemap.json` is found at the target path,
+the crawler **adds to it** — it never deletes components from other repos.
+
+### Core Principle: Never Delete Unless Explicitly Asked
+
+Running the crawler against repo B does not touch repo A's components. Components are never
+removed from the map automatically. They can only be:
+- **Updated** (re-crawled from their source repo)
+- **Marked stale** (not found in their own source repo during a re-crawl)
+- **Explicitly deleted** by the user (e.g., `/generateservicemap --remove-repo my-old-repo`)
+
+### When an existing servicemap.json is found:
 
 1. Read and parse the existing map.
 2. Check `schema_version` compatibility. If the major version differs, warn the user and offer to
-   regenerate from scratch.
-3. Crawl the repo as normal (all four phases).
-4. Merge strategy: **crawl wins for discovered data, preserve manual annotations.**
-   - Any field with `"manual_override": true` is preserved from the existing map, not overwritten.
-   - New components discovered in the crawl are added.
-   - Components in the existing map but not found in the crawl get flagged with
-     `"stale": true` and `"stale_since": "<timestamp>"` rather than removed.
-   - Connections are fully rebuilt from the crawl (they're too complex to merge partially).
-   - Stubs from other repos are preserved unchanged.
-5. Update all `last_crawled` timestamps for components that were re-crawled.
+   regenerate from scratch. If `repository` (singular, 1.0 format) exists, migrate to
+   `repositories[]` array format.
+3. Identify the current repo (from git remote or working directory name).
+4. Crawl the current repo as normal (all four phases).
+5. Merge strategy:
+   - **Components from the current repo**: crawl wins for discovered data. New components are
+     added. Components previously from this repo but not found in this crawl get marked
+     `"stale": true` with `"stale_since": "<timestamp>"`. They are NOT removed.
+   - **Components from other repos**: left completely untouched. Not updated, not marked stale,
+     not removed. They belong to their source repo's crawl cycle.
+   - **Manual overrides**: any field with `"manual_override": true` is preserved, not overwritten.
+   - **Stub resolution**: if a component discovered in this crawl matches a stub (by ID or name),
+     the stub is replaced with the full entry and `source_repo` is set to this repo.
+   - **Connections**: connections where the `source` belongs to the current repo are rebuilt from
+     the crawl. Connections where the `source` belongs to another repo are preserved. Cross-repo
+     connections (source in one repo, target in another) are rebuilt if the source repo is being
+     crawled.
+6. Update `last_crawled` on all components from this repo.
+7. Update the repo's entry in `repositories[]` (add it if this is the first crawl for this repo).
+8. Recompute `metadata.repo_staleness` for all repos.
+
+### Staleness reporting
+
+The `metadata.repo_staleness` array shows how fresh each repo's data is, sorted stalest-first:
+
+```json
+"repo_staleness": [
+  {"repo": "notification-service", "last_crawled": "2026-03-01T10:00:00Z", "components": 5, "age_days": 13},
+  {"repo": "my-platform", "last_crawled": "2026-03-14T12:00:00Z", "components": 18, "age_days": 0}
+]
+```
+
+After every crawl, report the staleness table to the user so they can see which repos need
+a refresh. If any repo is more than 30 days stale, flag it:
+
+```
+⚠️ STALE REPOS: notification-service was last crawled 45 days ago (5 components).
+   Consider re-running /generateservicemap from that repo to refresh.
+```
+
+### First-time crawl (no existing map)
+
+If no `servicemap.json` exists at the target path, this is a fresh map. Create the
+`repositories[]` array with a single entry for the current repo and proceed normally.
 
 ## Confidence Scoring Guide
 
@@ -245,11 +321,14 @@ be pretty-printed with 2-space indentation for version control friendliness, eve
 machine-targeted.
 
 After writing the file, report to the user:
-- Total components discovered (by type)
+- Total components discovered in this crawl (by type)
 - Total connections traced
-- Number of stubs (TODOs for other repos)
-- Any components with average confidence below 0.5 (these need human review)
-- If incremental: what changed since last crawl
+- Number of stubs remaining (unresolved cross-repo references)
+- Stubs resolved in this crawl (if merging into existing map)
+- Any components with confidence below 0.5 (these need human review)
+- If incremental: what changed since last crawl of this repo
+- **Repo staleness table**: for every repo in the map, show name, last crawled date, component
+  count, and age in days. Flag any repo > 30 days stale.
 
 ## Context Management
 
