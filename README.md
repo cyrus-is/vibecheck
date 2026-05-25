@@ -91,9 +91,51 @@ mcp-review ──────────→ .claude/commands/scrutineer-mcp.md
 
 The service map is optional but recommended. Without it, peer review and security review still work — they just can't do cross-service analysis or component-level reviews. `mcp-review` stands apart from this pipeline entirely: it audits an *external* MCP server rather than your repo, so it needs neither a service map nor a generate step.
 
+## Agent support
+
+Scrutineer targets **Claude Code** today — the generators emit `.claude/commands/*.md` and the skills install there. Support for **Cursor**, **Gemini CLI**, and **OpenAI Codex CLI** is in progress via a shared emitter / `--target` foundation; see the [Multi-tool support milestone](https://github.com/cyrus-is/scrutineer/milestone/1).
+
 ## Quick start
 
-### 1. Generate a service map (optional, recommended)
+The fastest path installs all four skills — correctly named and generated from a fresh service map — in one step. There are two front doors over the same shared installer; pick whichever fits where you are.
+
+### Option A — one command (recommended)
+
+**From Claude Code, inside your repo** — Claude crawls the service map, then installs everything:
+
+```
+/scrutineer-setup
+```
+
+(Copy `scrutineer-setup/SKILL.md` into your repo's `.claude/commands/` once to make `/scrutineer-setup` available, or just run the CLI below.)
+
+**From the shell** — install the `scrutineer` CLI and run the installer:
+
+```bash
+# Until the PyPI release is published, install from a clone:
+pip install -e .                                 # editable, from a clone
+# …or build and install the bundled wheel (works even with no clone present):
+python -m build && pip install dist/scrutineer-*.whl
+
+scrutineer install /path/to/your-repo            # map-less (fast)
+scrutineer install /path/to/your-repo --crawl    # also run the servicemap crawl via `claude -p`
+```
+
+Both produce the same result in `your-repo/.claude/commands/`:
+
+```
+/scrutineer-servicemap   /scrutineer-code   /scrutineer-security   /scrutineer-mcp
+```
+
+The only difference between the front doors is **how the service map is produced**: `/scrutineer-setup` lets Claude crawl it inline; `scrutineer install` reuses an existing `servicemap.json`, runs a headless `claude -p` crawl with `--crawl`, or skips it (re-run with `--force` after you generate a map to make the skills map-aware). The deterministic copy-and-generate work is identical and lives in `scrutineer/installer.py`.
+
+> Note: the wheel bundles the generators, guidance YAMLs, and skills under `scrutineer/_assets/`, so a plain wheel install with no clone works — `scrutineer/paths.py` resolves the bundled assets when installed and the repo-root copies when run from a clone. Publishing to PyPI (`pip install scrutineer`) is pending; until then use a clone or the built wheel above.
+
+### Option B — manual, step by step
+
+The steps below are what the installer automates; use them if you want to run each tool individually.
+
+#### 1. Generate a service map (optional, recommended)
 
 Copy `generate-servicemap/SKILL.md` to `.claude/commands/scrutineer-servicemap.md` in your target repo:
 
@@ -113,7 +155,7 @@ Validate the output:
 python generate-servicemap/validate_servicemap.py servicemap.json
 ```
 
-### 2. Generate review skills
+#### 2. Generate review skills
 
 ```bash
 # Peer review skill
@@ -127,7 +169,7 @@ python generate-security-review/generate.py /path/to/your-repo \
 
 Both generators **auto-discover `servicemap.json` at the repo root** when present, producing the richer cross-service-aware skill. Pass `--service-map /path/to/servicemap.json` for a non-standard location, or `--no-service-map` to deliberately skip it.
 
-### 3. Use the skills
+#### 3. Use the skills
 
 In Claude Code, inside your repo:
 
@@ -140,7 +182,7 @@ In Claude Code, inside your repo:
 /scrutineer-security --pr 123          # Audit a pull request
 ```
 
-### 4. Audit an MCP server (standalone)
+#### 4. Audit an MCP server (standalone)
 
 `mcp-review` ships its own analyzer, so set up its venv once:
 

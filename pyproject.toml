@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scrutineer"
+version = "1.5.0"
+description = "Agentic code review toolkit for Claude Code — one-command installer for the scrutineer-* skill set."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["pyyaml>=6.0"]
+
+[project.urls]
+Homepage = "https://github.com/cyrus-is/scrutineer"
+
+[project.scripts]
+scrutineer = "scrutineer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scrutineer"]
+
+# Bundle the runtime assets into the wheel under scrutineer/_assets/ without
+# moving them in the source tree (the servicemap/mcp skills reference them by
+# repo-relative paths). scrutineer/paths.py resolves _assets/ when installed and
+# the repo-root siblings when run from a clone or `pip install -e .`.
+#
+# Listed per-file on purpose: force-include bypasses `exclude`, so enumerating
+# the runtime essentials is the only way to keep tests/READMEs out of the wheel.
+[tool.hatch.build.targets.wheel.force-include]
+"generate-peer-review/generate.py" = "scrutineer/_assets/generate-peer-review/generate.py"
+"generate-peer-review/peer_review_guidance.yaml" = "scrutineer/_assets/generate-peer-review/peer_review_guidance.yaml"
+"generate-security-review/generate.py" = "scrutineer/_assets/generate-security-review/generate.py"
+"generate-security-review/security_guidance.yaml" = "scrutineer/_assets/generate-security-review/security_guidance.yaml"
+"generate-servicemap/SKILL.md" = "scrutineer/_assets/generate-servicemap/SKILL.md"
+"generate-servicemap/validate_servicemap.py" = "scrutineer/_assets/generate-servicemap/validate_servicemap.py"
+"mcp-review/SKILL.md" = "scrutineer/_assets/mcp-review/SKILL.md"
+"mcp-review/analyze_mcp.py" = "scrutineer/_assets/mcp-review/analyze_mcp.py"
+"mcp-review/fetch_source.py" = "scrutineer/_assets/mcp-review/fetch_source.py"
+"mcp-review/mcp_risk_guidance.yaml" = "scrutineer/_assets/mcp-review/mcp_risk_guidance.yaml"
+"references/schema.md" = "scrutineer/_assets/references/schema.md"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "scrutineer/",
+    "generate-peer-review/",
+    "generate-security-review/",
+    "generate-servicemap/",
+    "mcp-review/",
+    "references/",
+    "scrutineer-setup/",
+    "README.md",
+    "LICENSE*",
+]
