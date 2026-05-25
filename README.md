@@ -84,9 +84,12 @@ generate-servicemap ──→ servicemap.json
                     ▼                   ▼
          .claude/commands/      .claude/commands/
          peercodereview.md      security-review.md
+
+mcp-review ──────────→ .claude/commands/mcp-review.md
+   (standalone — audits external MCP servers, no service map needed)
 ```
 
-The service map is optional but recommended. Without it, peer review and security review still work — they just can't do cross-service analysis or component-level reviews.
+The service map is optional but recommended. Without it, peer review and security review still work — they just can't do cross-service analysis or component-level reviews. `mcp-review` stands apart from this pipeline entirely: it audits an *external* MCP server rather than your repo, so it needs neither a service map nor a generate step.
 
 ## Quick start
 
@@ -137,11 +140,32 @@ In Claude Code, inside your repo:
 /security-review --pr 123          # Audit a pull request
 ```
 
+### 4. Audit an MCP server (standalone)
+
+`mcp-review` ships its own analyzer, so set up its venv once:
+
+```bash
+cd mcp-review
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
+Install the skill into your repo, then run it in Claude Code:
+
+```bash
+cp mcp-review/SKILL.md /path/to/your-repo/.claude/commands/mcp-review.md
+```
+
+```
+/mcp-review                                        # review every server in the auto-discovered config
+/mcp-review github                                 # review one named server
+/mcp-review --config .mcp.json --tools tools.json  # add a captured tools/list for the tool-surface pass
+```
+
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+ (the tools use `X | None` type syntax)
 - `pyyaml>=6.0` (`pip install pyyaml`)
-- [Claude Code](https://claude.ai/code) to run the generated skills
+- [Claude Code](https://claude.ai/code) to run the skills
 
 ## Customizing
 
@@ -149,8 +173,9 @@ The review tools are driven by YAML guidance files:
 
 - **`generate-peer-review/peer_review_guidance.yaml`** — platform detection rules, pre-flight checks, focus areas, and change-type signals for peer review
 - **`generate-security-review/security_guidance.yaml`** — platform detection rules, vulnerability checklists with OWASP mapping, and secure alternatives
+- **`mcp-review/mcp_risk_guidance.yaml`** — config-smell definitions, sensitive-env-key patterns, the dangerous-capability taxonomy, and the data-sensitivity taxonomy for MCP review
 
-To add a new platform or customize checks for your stack, add entries to these files. The generators will pick them up automatically. Both tools also self-heal — if they detect a platform in your repo that isn't in the guidance file, they'll flag it and offer to enrich the guidance.
+To add a new platform or customize checks for your stack, add entries to these files. The two generators pick them up automatically and self-heal — if they detect a platform in your repo that isn't in the guidance file, they'll flag it and offer to enrich the guidance. (`mcp_risk_guidance.yaml` is read by `analyze_mcp.py`; add a pattern and open a PR.)
 
 The service map schema is documented in `references/schema.md`.
 
