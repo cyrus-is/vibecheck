@@ -1,6 +1,7 @@
 # Scrutineer
 
 [![Release](https://img.shields.io/github/v/release/cyrus-is/scrutineer?label=release)](https://github.com/cyrus-is/scrutineer/releases/latest)
+[![PyPI](https://img.shields.io/pypi/v/scrutineer?label=pypi)](https://pypi.org/project/scrutineer/)
 
 Agentic code review toolkit for [Claude Code](https://claude.ai/code). Three generators that scan your repo and produce tailored review skills — a principal engineer peer review, a security audit, and a service topology map that makes both smarter — plus `/scrutineer-mcp`, a standalone auditor for the MCP servers you're about to trust.
 
@@ -112,10 +113,8 @@ The fastest path installs all four skills — correctly named and generated from
 **From the shell** — install the `scrutineer` CLI and run the installer:
 
 ```bash
-# Until the PyPI release is published, install from a clone:
-pip install -e .                                 # editable, from a clone
-# …or build and install the bundled wheel (works even with no clone present):
-python -m build && pip install dist/scrutineer-*.whl
+pip install scrutineer                           # from PyPI
+# (or from a clone: `pip install -e .`)
 
 scrutineer install /path/to/your-repo            # map-less (fast)
 scrutineer install /path/to/your-repo --crawl    # also run the servicemap crawl via `claude -p`
@@ -129,7 +128,7 @@ Both produce the same result in `your-repo/.claude/commands/`:
 
 The only difference between the front doors is **how the service map is produced**: `/scrutineer-setup` lets Claude crawl it inline; `scrutineer install` reuses an existing `servicemap.json`, runs a headless `claude -p` crawl with `--crawl`, or skips it (re-run with `--force` after you generate a map to make the skills map-aware). The deterministic copy-and-generate work is identical and lives in `scrutineer/installer.py`.
 
-> Note: the wheel bundles the generators, guidance YAMLs, and skills under `scrutineer/_assets/`, so a plain wheel install with no clone works — `scrutineer/paths.py` resolves the bundled assets when installed and the repo-root copies when run from a clone. Publishing to PyPI (`pip install scrutineer`) is pending; until then use a clone or the built wheel above.
+> Note: the wheel bundles the generators, guidance YAMLs, and skills under `scrutineer/_assets/`, so `pip install scrutineer` works with no clone present — `scrutineer/paths.py` resolves the bundled assets when installed and the repo-root copies when run from a clone.
 
 ### Option B — manual, step by step
 
