@@ -1,0 +1,455 @@
+# MCP Risk Guidance
+# Tunable catalog for the /mcp-review skill. This file holds the DATA that
+# drives review — finding definitions, the lists/regexes that detection keys
+# off, and the dangerous-capability taxonomy. The detection LOGIC lives in
+# analyze_mcp.py (parsing a config or tools/list is too varied to fully
+# data-drive); this file is what you edit to tune severities, add a sensitive
+# env-key pattern, or recognize a new package runner.
+#
+# Philosophy mirrors security_guidance.yaml: specific, actionable findings —
+# not generic advice. Each finding names a concrete pattern and why it matters
+# for the trust decision (do I install this? do I let this tool run?).
+#
+# Severities: HIGH / MEDIUM / LOW / INFO. The analyzer attaches these as the
+# DEFAULT severity; the skill may re-rate with context (e.g. a localhost remote
+# downgrades the non-HTTPS finding).
+
+# =============================================================================
+# Config smells — flagged during the pre-install config pass (no server run).
+# Keyed by finding id. The analyzer emits {code, severity, category, title,
+# detail, recommendation} for each match.
+# =============================================================================
+config_smells:
+  shell_wrapper:
+    title: Server launched through a shell wrapper
+    severity: HIGH
+    category: install
+    rationale: >
+      The command is a shell (sh/bash/zsh/cmd/powershell) or invokes one with
+      -c. A shell wrapper means the real command is an opaque string the config
+      reader can't reason about, and it enables arbitrary chaining, env
+      expansion, and pipe-to-interpreter installs. Prefer a direct binary with
+      an explicit argv.
+    recommendation: >
+      Replace the shell invocation with the actual binary and an explicit args
+      array. If a shell is truly required, inspect the full command string by
+      hand before trusting the server.
+
+  package_runner_install:
+    title: Installed on-the-fly via a package runner
+    severity: MEDIUM
+    category: install
+    rationale: >
+      Commands like npx/uvx/bunx/dlx fetch and execute code at launch time.
+      Whatever the registry serves at run time is what executes — there is no
+      reviewed, pinned artifact on disk. Combined with an unpinned spec this is
+      a live remote-code path.
+    recommendation: >
+      Install the server as a pinned dependency and invoke the local binary, or
+      vendor it. If a runner is unavoidable, pin an exact version (see
+      unpinned_source).
+
+  unpinned_source:
+    title: Package source is unpinned or mutable
+    severity: HIGH
+    category: supply_chain
+    rationale: >
+      The package spec has no exact version pin (no @x.y.z, or @latest), or a
+      github:/git spec without a tag or commit SHA. The code that runs can
+      change under you with no diff and no review. This is the single most
+      common way a previously-reviewed MCP server silently becomes something
+      else.
+    recommendation: >
+      Pin an exact version (pkg@1.2.3) or a git commit SHA. Avoid @latest and
+      branch refs.
+
+  non_https_remote:
+    title: Remote server over a non-HTTPS transport
+    severity: HIGH
+    category: transport
+    rationale: >
+      An http:// (or ws://) remote endpoint sends tool calls, arguments, and
+      any credentials in cleartext, and offers no server authentication — a
+      network attacker can read or tamper with the entire MCP session. Localhost
+      is exempt (the skill downgrades it).
+    recommendation: >
+      Use https:// (or wss://). If this is a local dev server on localhost,
+      confirm it is never reachable off-host.
+
+  credentials_in_url:
+    title: Credentials embedded in the remote URL
+    severity: HIGH
+    category: secrets
+    rationale: >
+      The URL carries a secret — userinfo (user:pass@) or a token/key/apikey
+      query parameter. URLs land in logs, proxies, browser history, and process
+      listings, so the secret leaks far beyond the config.
+    recommendation: >
+      Move the credential into an env var or an Authorization header. Never put
+      secrets in a URL.
+
+  sensitive_env_required:
+    title: Server requires sensitive credentials
+    severity: INFO
+    category: secrets
+    rationale: >
+      One or more required env keys look like credentials (token, key, secret,
+      password, credential). Not a vulnerability by itself — it's the blast
+      radius signal. A server holding a broad API token is a higher-value target
+      and its tool surface deserves more scrutiny.
+    recommendation: >
+      Confirm each credential is scoped to least privilege and rotatable. Note
+      which tools can exfiltrate it.
+
+  unredacted_secret_value:
+    title: Config contains an unredacted secret value
+    severity: HIGH
+    category: secrets
+    rationale: >
+      An env value (or URL credential) appears to be a real secret rather than a
+      placeholder. The review artifact is meant to be shareable; a live secret
+      in it is itself an exposure. The analyzer never echoes the value — only
+      that one was present.
+    recommendation: >
+      Rotate the exposed secret. Redact the config before review (replace values
+      with a placeholder or an env-var reference) so the report stays shareable.
+
+  broad_filesystem_scope:
+    title: Broad filesystem path granted to the server
+    severity: MEDIUM
+    category: scope
+    rationale: >
+      An argument points the server at a wide path — a home directory, a drive
+      root, /, or a parent-of-everything. A filesystem MCP scoped this broadly
+      can read or write far beyond the task at hand.
+    recommendation: >
+      Scope filesystem servers to the narrowest directory that works. Avoid
+      home, root, and system paths.
+
+# =============================================================================
+# Lists the analyzer keys off. Editing these tunes detection without code
+# changes. Matching is case-insensitive on the basename for binaries/runners.
+# =============================================================================
+lists:
+  # Treated as shell wrappers. basename match.
+  shell_binaries:
+    - sh
+    - bash
+    - zsh
+    - dash
+    - ksh
+    - fish
+    - cmd
+    - cmd.exe
+    - powershell
+    - powershell.exe
+    - pwsh
+
+  # On-the-fly package runners (fetch + execute at launch).
+  package_runners:
+    - npx
+    - pnpx
+    - bunx
+    - uvx
+    - dlx        # "pnpm dlx" / "yarn dlx" — matched as an arg too
+    - pipx
+
+  # Flags that make a runner non-interactive (auto-accept install).
+  runner_auto_accept_flags:
+    - "-y"
+    - "--yes"
+    - "--no-install-interactive"
+
+  # A value equal to / containing one of these (case-insensitive) is treated as
+  # a placeholder, NOT a live secret. Keeps redacted configs from tripping
+  # unredacted_secret_value.
+  placeholder_markers:
+    - "***"
+    - "redacted"
+    - "changeme"
+    - "your-"
+    - "your_"
+    - "xxxx"
+    - "<"            # <YOUR_TOKEN>
+    - "${"           # ${ENV_VAR}
+    - "$env:"
+    - "%"            # %WINVAR%
+    - "placeholder"
+    - "example"
+    - "dummy"
+    - "..."
+
+  # Filesystem paths considered overly broad (exact match or prefix of arg).
+  broad_fs_paths:
+    - "/"
+    - "~"
+    - "$HOME"
+    - "%USERPROFILE%"
+    - "C:\\"
+    - "C:\\Users"
+    - "/Users"
+    - "/home"
+    - "/etc"
+    - "/var"
+
+# Tool-schema "intent" signals. Evasion looks like a benignly-named tool whose
+# input schema quietly accepts powerful or abstract inputs. These feed a
+# name-vs-schema mismatch check in the skill — they are signals, not findings.
+# Matched against schema property NAMES (anchored, case-insensitive).
+tool_schema_signals:
+  # Parameters that hand the tool an execution/abstract surface.
+  power_params:
+    - "^(command|cmd|exec|execute|eval|script|code|shell|run|spawn)$"
+    - "^(args|argv|arguments|opts|options|payload|raw|expression|template)$"
+  # Boolean/destructive modifiers that escalate an otherwise-mild tool.
+  destructive_flags:
+    - "^(force|purge|recursive|overwrite|hard|no[_-]?confirm|skip[_-]?confirm)$"
+  # Array params with these names mean "pass arbitrary arguments through".
+  arbitrary_arg_names:
+    - args
+    - argv
+    - arguments
+    - command
+    - cmd
+
+# Env-key NAMES (not values) matching any of these regexes are "sensitive".
+# Case-insensitive. Drives sensitive_env_required and informs the secret-value
+# refusal (we only inspect values of sensitive-looking keys for live secrets).
+sensitive_env_key_patterns:
+  - "token"
+  - "secret"
+  - "passwd|password|pwd"
+  - "credential"
+  - "api[_-]?key"
+  - "access[_-]?key"
+  - "private[_-]?key"
+  - "client[_-]?secret"
+  - "auth"
+  - "session"
+  - "cookie"
+  - "bearer"
+
+# =============================================================================
+# Dangerous capabilities — flagged during the tool-surface pass against each
+# tool's name + description + input schema. A match is a STARTING POINT for the
+# skill's per-tool allow/ask/deny classification, not an automatic deny.
+# Keyed by capability. patterns are case-insensitive regexes.
+# =============================================================================
+dangerous_capabilities:
+  code_execution:
+    title: Arbitrary code / command execution
+    severity: HIGH
+    default_classification: deny
+    patterns:
+      - "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|system)\\b"
+      - "\\b(interpreter|sandbox\\s*escape|child[_-]?process)\\b"
+    rationale: >
+      A tool that runs arbitrary commands or code is the highest-impact surface
+      an MCP server can expose — it collapses every other boundary.
+
+  file_write:
+    title: Filesystem write / modify
+    severity: MEDIUM
+    default_classification: ask
+    patterns:
+      - "\\b(write|create|save|put|upload|append|modify|edit|patch)[_-]?file\\b"
+      - "\\bwrite[_-]?(to[_-]?)?(disk|fs|path)\\b"
+    rationale: >
+      Write access lets a server plant files, overwrite configs, or stage a
+      later code-execution path.
+
+  file_delete:
+    title: Filesystem delete / destructive
+    severity: HIGH
+    default_classification: ask
+    patterns:
+      - "\\b(delete|remove|unlink|rm|destroy|purge|truncate|drop)\\b"
+    rationale: >
+      Destructive operations are irreversible and a common accidental-blast-
+      radius source. Default to ask even when the server is trusted.
+
+  network_egress:
+    title: Outbound network / data egress
+    severity: MEDIUM
+    default_classification: ask
+    patterns:
+      - "\\b(fetch|http[s]?|request|curl|webhook|post[_-]?to|send[_-]?to|upload)\\b"
+      - "\\b(url|endpoint|remote|external[_-]?api)\\b"
+    rationale: >
+      A tool that makes outbound calls can exfiltrate anything it can read
+      (including the server's own credentials) to an attacker-chosen host.
+
+  secrets_access:
+    title: Reads secrets / credentials / env
+    severity: HIGH
+    default_classification: ask
+    patterns:
+      - "\\b(secret|credential|token|api[_-]?key|password|keychain|vault)\\b"
+      - "\\b(read[_-]?env|environment[_-]?variable|getenv|dotenv)\\b"
+    rationale: >
+      A tool that surfaces secrets pairs dangerously with any network_egress
+      tool on the same server — read-then-send is a complete exfil chain.
+
+  database_access:
+    title: Direct database / data-store access
+    severity: MEDIUM
+    default_classification: ask
+    patterns:
+      - "\\b(sql|query|database|db[_-]?(exec|query)|mongo|redis|psql|select\\s+\\*)\\b"
+    rationale: >
+      Raw query access bypasses application-level authorization and tenant
+      scoping; injection in a tool parameter reaches the data directly.
+
+  privilege_escalation:
+    title: Privilege / permission change
+    severity: HIGH
+    default_classification: deny
+    patterns:
+      - "\\b(sudo|chmod|chown|setuid|grant|elevate|admin|root|privilege)\\b"
+    rationale: >
+      Tools that alter permissions or escalate privilege can expand their own
+      blast radius and persist access.
+
+# =============================================================================
+# Data sensitivity — a SEPARATE axis from security. dangerous_capabilities asks
+# "what can this tool DO?"; this asks "what data does it get to SEE?". A server
+# can be perfectly secure and still want to read every message you've ever sent.
+# The two are reported side by side, never merged: a SAFE security verdict can
+# accompany a HIGHLY_SENSITIVE data profile.
+#
+# Each tool is tagged with the data categories its name/description/schema
+# implies it touches. Each category carries a sensitivity TIER (separate
+# vocabulary from security severity to avoid confusion):
+#   critical  — secrets, private communications content, source code, financial,
+#               health. Reading this is a major exposure on its own.
+#   high      — personal data, file/document contents, calendar, contacts,
+#               location, browsing history, system/process state.
+#   medium    — metadata and structure: who/where/when, project & task status,
+#               org/team shape. Identifying but not the payload itself.
+#   low       — already-public or non-identifying aggregate data.
+#
+# Per server, the skill aggregates the union of categories into a rating:
+#   HIGHLY_SENSITIVE (touches any critical) / SENSITIVE (any high) /
+#   LIMITED (medium) / MINIMAL (low or none).
+# patterns are case-insensitive regexes run over name + description + schema.
+# =============================================================================
+data_sensitivity:
+  credentials_secrets:
+    label: Secrets, tokens & credentials
+    tier: critical
+    patterns:
+      - "\\b(secret|credential|token|api[_-]?key|password|keychain|vault|private[_-]?key)\\b"
+      - "\\b(read[_-]?env|environment[_-]?variable|getenv|dotenv)\\b"
+    rationale: The most sensitive payload — leaks compromise everything downstream.
+
+  communications_content:
+    label: Message / email / DM contents
+    tier: critical
+    patterns:
+      - "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b"
+      - "\\b(read|get|fetch|list|search|export)[_-]?(message|email|dm|chat|conversation|thread)s?\\b"
+    rationale: Full text of private communications — the actual content, not just who talked to whom.
+
+  source_code:
+    label: Source code & repository contents
+    tier: critical
+    patterns:
+      - "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|branch|blame)\\b"
+      - "\\b(read|get|search)[_-]?(code|file)\\b.*\\b(repo|repository|src|source)\\b"
+    rationale: Proprietary logic, embedded secrets, and architecture all live in source.
+
+  financial:
+    label: Financial / payment data
+    tier: critical
+    patterns:
+      - "\\b(payment|invoice|transaction|billing|credit[_-]?card|bank|salary|payroll|ledger|account[_-]?balance)\\b"
+    rationale: Direct financial exposure and a regulated data class.
+
+  health:
+    label: Health / medical data
+    tier: critical
+    patterns:
+      - "\\b(health|medical|patient|diagnosis|prescription|clinical|phi)\\b"
+    rationale: Regulated, highly sensitive personal data.
+
+  personal_identifiers:
+    label: Personal identifiers (PII)
+    tier: high
+    patterns:
+      - "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b"
+      - "\\b(user|customer|person)[_-]?(info|details|profile|record)\\b"
+    rationale: Identifies real people; aggregation enables tracking and de-anonymization.
+
+  files_documents:
+    label: File & document contents
+    tier: high
+    patterns:
+      - "\\b(read[_-]?file|get[_-]?file|file[_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b"
+    rationale: Documents routinely contain secrets, PII, and proprietary material.
+
+  calendar:
+    label: Calendar & schedule
+    tier: high
+    patterns:
+      - "\\b(calendar|event|meeting|schedule|availability|appointment|invite)\\b"
+    rationale: Reveals who you meet, when, and movements/availability.
+
+  contacts:
+    label: Contacts & address book
+    tier: high
+    patterns:
+      - "\\b(contact|address[_-]?book|directory|roster|connections)\\b"
+    rationale: Exposes a person's full social/professional graph.
+
+  location:
+    label: Location data
+    tier: high
+    patterns:
+      - "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b"
+    rationale: Physical tracking risk.
+
+  browsing_history:
+    label: Browsing / activity history
+    tier: high
+    patterns:
+      # "history" alone is too broad (e.g. "message history"); require a
+      # browsing/web qualifier or a concrete browsing artifact.
+      - "\\b(browsing|browser|web)[_-]?history\\b"
+      - "\\b(bookmarks|visited[_-]?(url|site|page)s?)\\b"
+    rationale: A detailed behavioral profile of the user.
+
+  system_state:
+    label: System / process / environment state
+    tier: high
+    patterns:
+      - "\\b(process[_-]?list|running[_-]?process|hostname|system[_-]?info|env[_-]?(var|dump)|ps\\s|netstat)\\b"
+    rationale: Host fingerprinting and often an indirect path to secrets.
+
+  communications_metadata:
+    label: Communication metadata (who / where / when)
+    tier: medium
+    patterns:
+      - "\\b(list[_-]?(channel|conversation|member|participant)s?|channel[_-]?list|presence|who[_-]?is|members?)\\b"
+    rationale: Not the message bodies, but the social graph and channel structure.
+
+  project_metadata:
+    label: Project / task / status metadata
+    tier: medium
+    patterns:
+      - "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b"
+      - "\\b(list|get)[_-]?(project|task|issue|ticket)s?\\b"
+    rationale: Names, statuses, and structure of work — identifying but not the underlying content.
+
+  org_structure:
+    label: Org / team structure
+    tier: medium
+    patterns:
+      - "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b"
+    rationale: Reveals headcount, hierarchy, and reporting relationships.
+
+  public_data:
+    label: Public / aggregate data
+    tier: low
+    patterns:
+      - "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b"
+    rationale: Already public or non-identifying — minimal exposure.

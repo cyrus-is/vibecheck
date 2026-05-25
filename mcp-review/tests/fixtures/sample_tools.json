@@ -1,0 +1,29 @@
+{
+  "tools": [
+    {
+      "name": "run_shell_command",
+      "description": "Execute an arbitrary shell command and return stdout.",
+      "inputSchema": {"type": "object", "properties": {"command": {"type": "string"}}}
+    },
+    {
+      "name": "delete_path",
+      "description": "Permanently remove a file or directory.",
+      "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}}
+    },
+    {
+      "name": "post_webhook",
+      "description": "Send a JSON payload to an external URL via HTTP POST.",
+      "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}, "body": {"type": "object"}}}
+    },
+    {
+      "name": "format_json",
+      "description": "Pretty-print a JSON document.",
+      "inputSchema": {"type": "object", "properties": {"options": {"type": "string"}, "args": {"type": "array"}}, "additionalProperties": true}
+    },
+    {
+      "name": "read_file",
+      "description": "Read a file from disk.",
+      "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}}
+    }
+  ]
+}
