@@ -1,17 +1,17 @@
 ---
-name: mcp-review
+name: scrutineer-mcp
 description: >
   Security AND data-sensitivity review of MCP (Model Context Protocol) servers before you trust them.
   Audits an MCP server's install/config, its exposed tool surface (tools/list), and its source code when
   obtainable, then emits a per-server SAFE / CAUTION / BLOCK security verdict PLUS a separate data-sensitivity
   rating (how much / how sensitive the data it can access is). Use this skill whenever the user says
-  /mcp-review, asks to "review an MCP", "audit an MCP server", "is this MCP safe to install", "what data does
+  /scrutineer-mcp, asks to "review an MCP", "audit an MCP server", "is this MCP safe to install", "what data does
   this MCP access", "check this mcp config", or pastes a claude_desktop_config.json / .mcp.json / tools/list to
   evaluate. This is NOT an MCP server itself and it does NOT start servers, call tools, or fetch URLs — it is a
   conservative reviewer that reasons over static evidence.
 ---
 
-# /mcp-review
+# /scrutineer-mcp
 
 Audit an MCP server before you trust it. Installing an MCP server grants it tool access, data access, and
 often a live credential. This skill makes that trust decision inspectable — **before** the server runs.
@@ -33,12 +33,12 @@ A server can be perfectly secure (SAFE) and still want to read every message you
 ## Invocation
 
 ```
-/mcp-review                         # Review every server in the auto-discovered config
-/mcp-review <server-name>           # Review one named server
-/mcp-review --config <path>         # Review a specific config file
-/mcp-review --tools <path>          # Also consume a tools/list JSON for the tool-surface pass
-/mcp-review --allowlist <path>      # Also check the client's permission grants for approval drift
-/mcp-review --help                  # Show help and stop
+/scrutineer-mcp                         # Review every server in the auto-discovered config
+/scrutineer-mcp <server-name>           # Review one named server
+/scrutineer-mcp --config <path>         # Review a specific config file
+/scrutineer-mcp --tools <path>          # Also consume a tools/list JSON for the tool-surface pass
+/scrutineer-mcp --allowlist <path>      # Also check the client's permission grants for approval drift
+/scrutineer-mcp --help                  # Show help and stop
 ```
 
 - `--config` (optional): path to an MCP client config. If omitted, auto-discover (see below).
@@ -83,7 +83,7 @@ Run the analyzer over the config. This pass answers: **should I install this at 
 mcp-review/.venv/bin/python mcp-review/analyze_mcp.py \
   --config <config-path> \
   [--server <name>] \
-  [--suppressions .claude/mcp-review-suppressions.json]
+  [--suppressions .claude/scrutineer-mcp-suppressions.json]
 ```
 
 The analyzer returns normalized JSON. For each server it flags deterministic config smells — interpret
@@ -223,7 +223,7 @@ Review the tool handlers for:
 - **Dependency / supply chain** — unpinned deps, install scripts, known-bad packages.
 
 Source findings use the same severity vocabulary as the security review (CRITICAL/HIGH/MEDIUM/LOW) and a
-concrete exploit path, just like `/security-review`.
+concrete exploit path, just like `/scrutineer-security`.
 
 ### Closed-source / binary degradation
 
@@ -336,7 +336,7 @@ The analyzer binds every finding to a SHA-256 **digest** of the fields that chan
 schema). A suppression matches only while its digest is unchanged, so the moment a server's args or a
 tool's schema change, the finding **automatically re-enters review**.
 
-To suppress a reviewed-and-accepted finding, append to `.claude/mcp-review-suppressions.json`:
+To suppress a reviewed-and-accepted finding, append to `.claude/scrutineer-mcp-suppressions.json`:
 
 ```json
 {
@@ -431,7 +431,7 @@ mcp-review/.venv/bin/python mcp-review/analyze_mcp.py \
 mcp-review/.venv/bin/python mcp-review/analyze_mcp.py \
   --config .mcp.json --server github --tools tools.json \
   --allowlist .claude/settings.json \
-  --suppressions .claude/mcp-review-suppressions.json
+  --suppressions .claude/scrutineer-mcp-suppressions.json
 ```
 
 The analyzer never starts a server, calls a tool, fetches a URL, or echoes a secret value. It is a
@@ -443,15 +443,15 @@ yours.
 If the argument is `--help`, output this and stop:
 
 ```
-/mcp-review — Security + data-sensitivity review of MCP servers
+/scrutineer-mcp — Security + data-sensitivity review of MCP servers
 
 USAGE:
-  /mcp-review                  Review every server in the auto-discovered config
-  /mcp-review <server-name>    Review one named server
-  /mcp-review --config <path>  Review a specific config file
-  /mcp-review --tools <path>   Also consume a tools/list JSON (tool-surface pass)
-  /mcp-review --allowlist <p>  Also check the client's grants for approval drift
-  /mcp-review --help           Show this help
+  /scrutineer-mcp                  Review every server in the auto-discovered config
+  /scrutineer-mcp <server-name>    Review one named server
+  /scrutineer-mcp --config <path>  Review a specific config file
+  /scrutineer-mcp --tools <path>   Also consume a tools/list JSON (tool-surface pass)
+  /scrutineer-mcp --allowlist <p>  Also check the client's grants for approval drift
+  /scrutineer-mcp --help           Show this help
 
 WHAT IT DOES (three passes, static-first — never runs the server):
   1. Config review     install/transport/secret/scope smells + provenance/containment

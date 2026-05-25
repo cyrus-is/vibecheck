@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/cyrus-is/scrutineer?label=release)](https://github.com/cyrus-is/scrutineer/releases/latest)
 
-Agentic code review toolkit for [Claude Code](https://claude.ai/code). Three generators that scan your repo and produce tailored review skills — a principal engineer peer review, a security audit, and a service topology map that makes both smarter — plus `/mcp-review`, a standalone auditor for the MCP servers you're about to trust.
+Agentic code review toolkit for [Claude Code](https://claude.ai/code). Three generators that scan your repo and produce tailored review skills — a principal engineer peer review, a security audit, and a service topology map that makes both smarter — plus `/scrutineer-mcp`, a standalone auditor for the MCP servers you're about to trust.
 
 ## What's in the box
 
@@ -22,7 +22,7 @@ Supports incremental updates — re-run it as your codebase evolves and it merge
 
 ### generate-peer-review
 
-Scans your repo and generates a Claude Code skill (`.claude/commands/peercodereview.md`) that performs principal engineer-level code review across **8 evaluation lenses**:
+Scans your repo and generates a Claude Code skill (`.claude/commands/scrutineer-code.md`) that performs principal engineer-level code review across **8 evaluation lenses**:
 
 | Lens | What it checks |
 |------|---------------|
@@ -44,7 +44,7 @@ The generated skill is customized to your repo's tech stack — it detects which
 
 ### generate-security-review
 
-Same scan-and-generate approach, producing `.claude/commands/security-review.md` — a security auditor skill that hunts for vulnerabilities.
+Same scan-and-generate approach, producing `.claude/commands/scrutineer-security.md` — a security auditor skill that hunts for vulnerabilities.
 
 **Analysis flow:**
 1. **Threat model** — attack surface, trust boundaries, blast radius, auth model
@@ -56,7 +56,7 @@ Findings are rated CRITICAL / HIGH / MEDIUM / LOW. Security review output stays 
 
 ### mcp-review
 
-A standalone auditor for MCP servers — the `npm audit` equivalent for the [Model Context Protocol](https://modelcontextprotocol.io). Installing an MCP server grants it tool access, data access, and usually a live credential; `/mcp-review` makes that trust decision inspectable **before** the server runs. Unlike the generators, it reviews an *external* server rather than your repo, so there's no generate step — it's a static skill plus a runtime analyzer (`analyze_mcp.py`), evidence in Python and judgment in the skill.
+A standalone auditor for MCP servers — the `npm audit` equivalent for the [Model Context Protocol](https://modelcontextprotocol.io). Installing an MCP server grants it tool access, data access, and usually a live credential; `/scrutineer-mcp` makes that trust decision inspectable **before** the server runs. Unlike the generators, it reviews an *external* server rather than your repo, so there's no generate step — it's a static skill plus a runtime analyzer (`analyze_mcp.py`), evidence in Python and judgment in the skill.
 
 It reports **two independent axes** — a server can be perfectly secure and still want to read every message you've ever sent:
 
@@ -83,9 +83,9 @@ generate-servicemap ──→ servicemap.json
                     │                   │
                     ▼                   ▼
          .claude/commands/      .claude/commands/
-         peercodereview.md      security-review.md
+         scrutineer-code.md      scrutineer-security.md
 
-mcp-review ──────────→ .claude/commands/mcp-review.md
+mcp-review ──────────→ .claude/commands/scrutineer-mcp.md
    (standalone — audits external MCP servers, no service map needed)
 ```
 
@@ -95,16 +95,16 @@ The service map is optional but recommended. Without it, peer review and securit
 
 ### 1. Generate a service map (optional, recommended)
 
-Copy `generate-servicemap/SKILL.md` to `.claude/commands/generateservicemap.md` in your target repo:
+Copy `generate-servicemap/SKILL.md` to `.claude/commands/scrutineer-servicemap.md` in your target repo:
 
 ```bash
-cp generate-servicemap/SKILL.md /path/to/your-repo/.claude/commands/generateservicemap.md
+cp generate-servicemap/SKILL.md /path/to/your-repo/.claude/commands/scrutineer-servicemap.md
 ```
 
 Then in Claude Code, inside your repo:
 
 ```
-/generateservicemap --path servicemap.json
+/scrutineer-servicemap --path servicemap.json
 ```
 
 Validate the output:
@@ -118,11 +118,11 @@ python generate-servicemap/validate_servicemap.py servicemap.json
 ```bash
 # Peer review skill
 python generate-peer-review/generate.py /path/to/your-repo \
-  --output .claude/commands/peercodereview.md
+  --output .claude/commands/scrutineer-code.md
 
 # Security review skill
 python generate-security-review/generate.py /path/to/your-repo \
-  --output .claude/commands/security-review.md
+  --output .claude/commands/scrutineer-security.md
 ```
 
 Both generators **auto-discover `servicemap.json` at the repo root** when present, producing the richer cross-service-aware skill. Pass `--service-map /path/to/servicemap.json` for a non-standard location, or `--no-service-map` to deliberately skip it.
@@ -132,12 +132,12 @@ Both generators **auto-discover `servicemap.json` at the repo root** when presen
 In Claude Code, inside your repo:
 
 ```
-/peercodereview                    # Review current branch diff
-/peercodereview --pr 123           # Review a pull request
-/peercodereview --component api    # Deep review of a component
+/scrutineer-code                    # Review current branch diff
+/scrutineer-code --pr 123           # Review a pull request
+/scrutineer-code --component api    # Deep review of a component
 
-/security-review                   # Security audit of current branch diff
-/security-review --pr 123          # Audit a pull request
+/scrutineer-security                   # Security audit of current branch diff
+/scrutineer-security --pr 123          # Audit a pull request
 ```
 
 ### 4. Audit an MCP server (standalone)
@@ -152,13 +152,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Install the skill into your repo, then run it in Claude Code:
 
 ```bash
-cp mcp-review/SKILL.md /path/to/your-repo/.claude/commands/mcp-review.md
+cp mcp-review/SKILL.md /path/to/your-repo/.claude/commands/scrutineer-mcp.md
 ```
 
 ```
-/mcp-review                                        # review every server in the auto-discovered config
-/mcp-review github                                 # review one named server
-/mcp-review --config .mcp.json --tools tools.json  # add a captured tools/list for the tool-surface pass
+/scrutineer-mcp                                        # review every server in the auto-discovered config
+/scrutineer-mcp github                                 # review one named server
+/scrutineer-mcp --config .mcp.json --tools tools.json  # add a captured tools/list for the tool-surface pass
 ```
 
 ## Requirements

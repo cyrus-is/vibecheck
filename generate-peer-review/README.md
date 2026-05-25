@@ -1,7 +1,7 @@
 # generate-peer-review
 
 Scans a repository (and optionally a `servicemap.json`) to generate a tailored
-`.claude/commands/peercodereview.md` — a Principal Engineer-level code review skill
+`.claude/commands/scrutineer-code.md` — a Principal Engineer-level code review skill
 with platform-specific pre-flight checks, focus areas, and 8 evaluation lenses.
 
 ## Quick Start
@@ -24,10 +24,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 1. **Scans** the repo for languages, frameworks, and infrastructure
 2. **Loads** platform-specific pre-flight checks and focus areas from `peer_review_guidance.yaml`
 3. **Optionally reads** `servicemap.json` to discover reviewable components (services + apps)
-4. **Generates** a `/peercodereview` skill with three invocation modes:
-   - `/peercodereview` — review current branch diff vs main
-   - `/peercodereview 123` — review PR #123 (fetches, diffs, posts findings as comment)
-   - `/peercodereview neighbors` — full review of all code in a service/app directory
+4. **Generates** a `/scrutineer-code` skill with three invocation modes:
+   - `/scrutineer-code` — review current branch diff vs main
+   - `/scrutineer-code 123` — review PR #123 (fetches, diffs, posts findings as comment)
+   - `/scrutineer-code neighbors` — full review of all code in a service/app directory
 5. **Embeds self-healing** — flags unknown platforms and offers to enrich itself
 
 ## The 8 Evaluation Lenses
@@ -60,7 +60,7 @@ Generate a service map first: see `tools/generate-servicemap/`.
 ## Options
 
 ```
---output, -o        Output path (default: .claude/commands/peercodereview.md)
+--output, -o        Output path (default: .claude/commands/scrutineer-code.md)
 --service-map, -s   Path to servicemap.json for richer context
 --guidance, -g      Custom guidance YAML path
 --dry-run, -n       Preview without writing

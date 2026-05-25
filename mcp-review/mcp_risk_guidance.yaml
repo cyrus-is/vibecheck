@@ -1,5 +1,5 @@
 # MCP Risk Guidance
-# Tunable catalog for the /mcp-review skill. This file holds the DATA that
+# Tunable catalog for the /scrutineer-mcp skill. This file holds the DATA that
 # drives review — finding definitions, the lists/regexes that detection keys
 # off, and the dangerous-capability taxonomy. The detection LOGIC lives in
 # analyze_mcp.py (parsing a config or tools/list is too varied to fully

@@ -3,13 +3,13 @@
 Peer Review Skill Generator
 
 Scans a repository (and optionally consumes a servicemap.json) to generate a
-tailored .claude/commands/peercodereview.md with platform-specific pre-flight
+tailored .claude/commands/scrutineer-code.md with platform-specific pre-flight
 checks, focus areas, and evaluation lenses.
 
 The generated skill supports three invocation modes:
-  /peercodereview          — review current branch diff vs main
-  /peercodereview 123      — review PR #123 (git pull + checkout)
-  /peercodereview neighbors — full review of a service/app from the service map
+  /scrutineer-code          — review current branch diff vs main
+  /scrutineer-code 123      — review PR #123 (git pull + checkout)
+  /scrutineer-code neighbors — full review of a service/app from the service map
 
 Usage:
     python generate.py /path/to/repo
@@ -211,13 +211,13 @@ class SkillGenerator:
 
             ### Mode 1: Current Branch Diff (no arguments)
             ```
-            /peercodereview
+            /scrutineer-code
             ```
             Reviews the current branch's changes against main. Runs `git diff main...HEAD`.
 
             ### Mode 2: PR Review (numeric argument)
             ```
-            /peercodereview 123
+            /scrutineer-code 123
             ```
             Reviews PR #123. Process:
             1. `git fetch origin`
@@ -228,7 +228,7 @@ class SkillGenerator:
 
             ### Mode 3: Full Service/App Review (component name argument)
             ```
-            /peercodereview <component-name>
+            /scrutineer-code <component-name>
             ```
             Full review of all code in a service or app directory — not just a diff. This is for
             comprehensive reviews of an entire component.
@@ -241,7 +241,7 @@ class SkillGenerator:
 
             ### Mode 4: Deep Repo Review (--deep flag)
             ```
-            /peercodereview --deep
+            /scrutineer-code --deep
             ```
             Full repository-level review that traces flows across services, compares patterns
             cross-service, and finds systemic issues that component-level reviews miss. This is
@@ -612,7 +612,7 @@ class SkillGenerator:
             Do not manufacture findings. If the code is clean, APPROVE it.
 
             **GitHub issues are opt-in.** Do NOT auto-file GitHub issues for findings.
-            Only create issues if the user explicitly asks (e.g., `/peercodereview 123 --file-issues`).
+            Only create issues if the user explicitly asks (e.g., `/scrutineer-code 123 --file-issues`).
 
         """)
 
@@ -781,14 +781,14 @@ class SkillGenerator:
             If the argument is `--help`, output this summary and stop:
 
             ```
-            /peercodereview — Principal Engineer peer code review
+            /scrutineer-code — Principal Engineer peer code review
 
             MODES:
-              /peercodereview              Review current branch diff vs main (~2 min)
-              /peercodereview 123          Review PR #123, post findings as comment (~5 min)
-              /peercodereview <component>  Full review of a service/app by name (~5 min)
-              /peercodereview --deep       Deep repo-wide review across all components (~20 min)
-              /peercodereview --help       Show this help
+              /scrutineer-code              Review current branch diff vs main (~2 min)
+              /scrutineer-code 123          Review PR #123, post findings as comment (~5 min)
+              /scrutineer-code <component>  Full review of a service/app by name (~5 min)
+              /scrutineer-code --deep       Deep repo-wide review across all components (~20 min)
+              /scrutineer-code --help       Show this help
 
             WHAT IT DOES:
               Modes 1-3: Pre-flight checks → agentic analysis → 8 evaluation lenses
@@ -871,8 +871,8 @@ def main():
         """),
     )
     parser.add_argument("repo_path", help="Path to the repository to analyze")
-    parser.add_argument("--output", "-o", default=".claude/commands/peercodereview.md",
-                        help="Output path relative to repo root (default: .claude/commands/peercodereview.md)")
+    parser.add_argument("--output", "-o", default=".claude/commands/scrutineer-code.md",
+                        help="Output path relative to repo root (default: .claude/commands/scrutineer-code.md)")
     sm_group = parser.add_mutually_exclusive_group()
     sm_group.add_argument("--service-map", "-s", default=None,
                           help="Path to servicemap.json for richer context. "
@@ -884,7 +884,7 @@ def main():
     parser.add_argument("--dry-run", "-n", action="store_true",
                         help="Print generated skill to stdout without writing")
     parser.add_argument("--force", "-f", action="store_true",
-                        help="Overwrite existing peercodereview.md without prompting")
+                        help="Overwrite existing scrutineer-code.md without prompting")
 
     args = parser.parse_args()
 
@@ -982,7 +982,7 @@ def main():
     if service_map:
         reviewable = service_map.get_reviewable_components()
         print(f"  Reviewable components: {len(reviewable)} (from service map)")
-    print(f"\nUsage: /peercodereview (from Claude Code in the target repo)")
+    print(f"\nUsage: /scrutineer-code (from Claude Code in the target repo)")
 
 
 if __name__ == "__main__":

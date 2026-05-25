@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MCP source-fetch helper — the safe-acquisition half of /mcp-review Pass 3.
+MCP source-fetch helper — the safe-acquisition half of /scrutineer-mcp Pass 3.
 
 Pass 3 reviews an MCP server's source whenever it can be obtained. But ACQUIRING
 that source is itself an active, weaponizable operation: a malicious package can
@@ -628,7 +628,7 @@ def plan_to_resolved(plan: dict) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Safely fetch + extract MCP server source for /mcp-review Pass 3.",
+        description="Safely fetch + extract MCP server source for /scrutineer-mcp Pass 3.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     src = parser.add_mutually_exclusive_group(required=True)

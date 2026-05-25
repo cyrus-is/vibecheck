@@ -1,10 +1,10 @@
 ---
-name: generateservicemap
+name: scrutineer-servicemap
 description: >
   Deep agentic crawl of a code repository to produce a machine-readable servicemap.json that maps every service,
   app, library, data store, external dependency, infrastructure resource, CI/CD pipeline, and inter-service
   communication path — including authentication, authorization, public/private endpoints, and confidence scores.
-  Use this skill whenever the user says /generateservicemap, asks to "map a repo", "build a service map",
+  Use this skill whenever the user says /scrutineer-servicemap, asks to "map a repo", "build a service map",
   "generate a service topology", "trace service dependencies", "map infrastructure", or any variation of
   "understand how this codebase fits together." Also trigger when the user asks to update or enrich an
   existing servicemap.json. This skill is designed for DEEP crawls — it does not support shallow or partial
@@ -12,7 +12,7 @@ description: >
   direct human reading.
 ---
 
-# /generateservicemap
+# /scrutineer-servicemap
 
 Generate a comprehensive, machine-readable `servicemap.json` from a repository by performing a deep, phased
 agentic crawl. The map captures services, apps, libraries, infrastructure, data stores, external dependencies,
@@ -22,12 +22,12 @@ on every discovery.
 ## Invocation
 
 ```
-/generateservicemap --path <output-path>
+/scrutineer-servicemap --path <output-path>
 ```
 
 - `--path` (optional): Where to write the output file. Defaults to `./servicemap.json` in the current
   working directory. Use a specific path to control where the map lands (e.g.,
-  `/generateservicemap --path tools/servicemap.json`).
+  `/scrutineer-servicemap --path tools/servicemap.json`).
 
 ## Before You Start
 
@@ -252,7 +252,7 @@ Running the crawler against repo B does not touch repo A's components. Component
 removed from the map automatically. They can only be:
 - **Updated** (re-crawled from their source repo)
 - **Marked stale** (not found in their own source repo during a re-crawl)
-- **Explicitly deleted** by the user (e.g., `/generateservicemap --remove-repo my-old-repo`)
+- **Explicitly deleted** by the user (e.g., `/scrutineer-servicemap --remove-repo my-old-repo`)
 
 ### When an existing servicemap.json is found:
 
@@ -295,7 +295,7 @@ a refresh. If any repo is more than 30 days stale, flag it:
 
 ```
 ⚠️ STALE REPOS: notification-service was last crawled 45 days ago (5 components).
-   Consider re-running /generateservicemap from that repo to refresh.
+   Consider re-running /scrutineer-servicemap from that repo to refresh.
 ```
 
 ### First-time crawl (no existing map)

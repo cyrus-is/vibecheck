@@ -1,7 +1,7 @@
 # Security Review Skill Generator
 
 Scans a repository (and optionally a `servicemap.json`) to generate a tailored
-`.claude/commands/security-review.md` with platform-specific vulnerability checklists.
+`.claude/commands/scrutineer-security.md` with platform-specific vulnerability checklists.
 
 ## Quick Start
 
@@ -23,10 +23,10 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 1. **Scans** the repo for languages, frameworks, and infrastructure
 2. **Loads** platform-specific security checklists from `security_guidance.yaml` — each item names a specific vulnerable API/pattern and its secure alternative
 3. **Optionally reads** `servicemap.json` to discover reviewable components, unauthenticated endpoints, and shared datastores
-4. **Generates** a `/security-review` skill with three invocation modes:
-   - `/security-review` — review current branch diff vs main
-   - `/security-review 123` — review PR #123 (outputs to terminal, not auto-posted — security findings may be sensitive)
-   - `/security-review neighbors` — full security audit of a service/app directory
+4. **Generates** a `/scrutineer-security` skill with three invocation modes:
+   - `/scrutineer-security` — review current branch diff vs main
+   - `/scrutineer-security 123` — review PR #123 (outputs to terminal, not auto-posted — security findings may be sensitive)
+   - `/scrutineer-security neighbors` — full security audit of a service/app directory
 5. **Embeds self-healing** — flags unknown platforms and offers to enrich itself
 
 ## Service Map Integration
@@ -59,7 +59,7 @@ Edit `security_guidance.yaml` to add new platforms or checklist items. Each entr
 ## Options
 
 ```
---output, -o        Output path (default: .claude/commands/security-review.md)
+--output, -o        Output path (default: .claude/commands/scrutineer-security.md)
 --service-map, -s   Path to servicemap.json for richer context
 --guidance, -g      Custom guidance YAML path
 --dry-run, -n       Preview without writing

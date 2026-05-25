@@ -4,13 +4,13 @@ A Claude Code skill that performs a deep, phased crawl of a repository and produ
 
 ## Setup
 
-1. Copy `SKILL.md` into your repo's `.claude/commands/` directory (rename to `generateservicemap.md`)
+1. Copy `SKILL.md` into your repo's `.claude/commands/` directory (rename to `scrutineer-servicemap.md`)
 2. Place `references/schema.md` as a sibling `references/` folder next to where you want the output:
 
 ```
 your-repo/
 ├── .claude/commands/
-│   └── generateservicemap.md    ← copy of SKILL.md
+│   └── scrutineer-servicemap.md    ← copy of SKILL.md
 ├── tools/
 │   ├── references/
 │   │   └── schema.md            ← schema reference
@@ -25,10 +25,10 @@ From Claude Code in your repo:
 
 ```
 # Default: writes to ./servicemap.json, looks for ./references/schema.md
-/generateservicemap
+/scrutineer-servicemap
 
 # Specify output path: writes to tools/servicemap.json, looks for tools/references/schema.md
-/generateservicemap --path tools/servicemap.json
+/scrutineer-servicemap --path tools/servicemap.json
 ```
 
 ## What it produces

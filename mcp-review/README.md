@@ -13,7 +13,7 @@ questions, so they get separate answers.
 ## Architecture — a runtime split, not a generator
 
 Unlike `generate-peer-review` and `generate-security-review` (which scan the **host repo** at generate time
-and emit a tailored skill), `/mcp-review` reviews an **external** MCP server — independent of whatever repo
+and emit a tailored skill), `/scrutineer-mcp` reviews an **external** MCP server — independent of whatever repo
 you're in. There's no per-repo tailoring axis, so there's no generation step. The closer analog in this repo
 is `generate-servicemap`: a static skill plus a runtime Python helper.
 
@@ -21,7 +21,7 @@ is `generate-servicemap`: a static skill plus a runtime Python helper.
 |---|---|
 | `analyze_mcp.py` | **Deterministic half.** Parses config + `tools/list`, flags known patterns reproducibly, tags data categories, computes stable digests. Produces *evidence, never verdicts*. |
 | `fetch_source.py` | **Safe-acquisition half of Pass 3.** Resolves + downloads source via registry HTTP APIs (or a commit-pinned GitHub tarball), verifies integrity, and extracts with a path-sanitizing extractor. Never invokes npm/pip/git; never executes fetched code. Emits a manifest with `source_artifact_match`. |
-| `SKILL.md` | **Judgment half.** Reads the analyzer's JSON, reviews source when available, reasons about risk and chains, assigns the verdict. Copied to `.claude/commands/mcp-review.md`. |
+| `SKILL.md` | **Judgment half.** Reads the analyzer's JSON, reviews source when available, reasons about risk and chains, assigns the verdict. Copied to `.claude/commands/scrutineer-mcp.md`. |
 | `mcp_risk_guidance.yaml` | Tunable catalog: config-smell definitions, sensitive-env-key patterns, package-runner/shell lists, the dangerous-capability taxonomy, and the data-sensitivity taxonomy. |
 
 Detection stays deterministic in Python for reproducibility, and because **digest-bound suppression needs
@@ -36,15 +36,15 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 Install the skill into your target repo (or use Claude Desktop's commands dir):
 
 ```bash
-cp SKILL.md /path/to/your-repo/.claude/commands/mcp-review.md
+cp SKILL.md /path/to/your-repo/.claude/commands/scrutineer-mcp.md
 ```
 
 Then in Claude Code:
 
 ```
-/mcp-review                    # review every server in the auto-discovered config
-/mcp-review github             # review one named server
-/mcp-review --config .mcp.json --tools github-tools.json
+/scrutineer-mcp                    # review every server in the auto-discovered config
+/scrutineer-mcp github             # review one named server
+/scrutineer-mcp --config .mcp.json --tools github-tools.json
 ```
 
 Or run the analyzer directly:
@@ -58,7 +58,7 @@ Or run the analyzer directly:
 
 # With suppressions reconciled
 .venv/bin/python analyze_mcp.py --config .mcp.json --tools tools.json \
-  --suppressions .claude/mcp-review-suppressions.json
+  --suppressions .claude/scrutineer-mcp-suppressions.json
 ```
 
 Safely fetch a server's source for Pass 3 (never runs npm/pip/git, never executes fetched code):
@@ -168,7 +168,7 @@ contain only placeholders — no live-looking secrets are committed.
 
 - Python 3.10+ (uses `X | None` type syntax)
 - `pyyaml>=6.0`
-- [Claude Code](https://claude.ai/code) to run the `/mcp-review` skill
+- [Claude Code](https://claude.ai/code) to run the `/scrutineer-mcp` skill
 
 ## Status
 

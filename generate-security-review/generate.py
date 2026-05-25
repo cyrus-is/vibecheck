@@ -3,13 +3,13 @@
 Security Review Skill Generator
 
 Scans a repository (and optionally consumes a servicemap.json) to generate a
-tailored .claude/commands/security-review.md with platform-specific vulnerability
+tailored .claude/commands/scrutineer-security.md with platform-specific vulnerability
 checklists.
 
 The generated skill supports three invocation modes:
-  /security-review              — review current branch diff vs main
-  /security-review 123          — review PR #123 (git fetch + diff)
-  /security-review neighbors    — full security review of a service/app from the service map
+  /scrutineer-security              — review current branch diff vs main
+  /scrutineer-security 123          — review PR #123 (git fetch + diff)
+  /scrutineer-security neighbors    — full security review of a service/app from the service map
 
 Usage:
     python generate.py /path/to/repo
@@ -175,7 +175,7 @@ class ServiceMapLoader:
 # ---------------------------------------------------------------------------
 
 class SkillGenerator:
-    """Generates the security-review.md skill file."""
+    """Generates the scrutineer-security.md skill file."""
 
     def generate(self, detected: dict[str, dict],
                  component_paths: dict[str, list[str]],
@@ -232,13 +232,13 @@ class SkillGenerator:
 
             ### Mode 1: Current Branch Diff (no arguments)
             ```
-            /security-review
+            /scrutineer-security
             ```
             Reviews the current branch's security-relevant changes against main. Runs `git diff main...HEAD`.
 
             ### Mode 2: PR Review (numeric argument)
             ```
-            /security-review 123
+            /scrutineer-security 123
             ```
             Reviews PR #123 for security issues. Process:
             1. `git fetch origin`
@@ -249,7 +249,7 @@ class SkillGenerator:
 
             ### Mode 3: Full Service/App Security Audit (component name argument)
             ```
-            /security-review <component-name>
+            /scrutineer-security <component-name>
             ```
             Full security audit of all code in a service or app directory. This is for
             comprehensive security reviews — not just a diff, but the entire attack surface.
@@ -263,7 +263,7 @@ class SkillGenerator:
 
             ### Mode 4: Deep Repo Security Audit (--deep flag)
             ```
-            /security-review --deep
+            /scrutineer-security --deep
             ```
             Full repository-level security audit that traces trust boundaries across services,
             audits auth boundaries end-to-end, traces secrets from storage through infrastructure
@@ -704,14 +704,14 @@ class SkillGenerator:
             If the argument is `--help`, output this summary and stop:
 
             ```
-            /security-review — Security-focused code review
+            /scrutineer-security — Security-focused code review
 
             MODES:
-              /security-review              Review current branch diff vs main (~2 min)
-              /security-review 123          Review PR #123 for security issues (~5 min)
-              /security-review <component>  Full security audit of a service/app (~5 min)
-              /security-review --deep       Deep repo-wide security audit (~20 min)
-              /security-review --help       Show this help
+              /scrutineer-security              Review current branch diff vs main (~2 min)
+              /scrutineer-security 123          Review PR #123 for security issues (~5 min)
+              /scrutineer-security <component>  Full security audit of a service/app (~5 min)
+              /scrutineer-security --deep       Deep repo-wide security audit (~20 min)
+              /scrutineer-security --help       Show this help
 
             WHAT IT DOES:
               Modes 1-3: Threat model → checklist scan → agentic analysis (input tracing,
@@ -957,8 +957,8 @@ def main():
         """),
     )
     parser.add_argument("repo_path", help="Path to the repository to analyze")
-    parser.add_argument("--output", "-o", default=".claude/commands/security-review.md",
-                        help="Output path relative to repo root (default: .claude/commands/security-review.md)")
+    parser.add_argument("--output", "-o", default=".claude/commands/scrutineer-security.md",
+                        help="Output path relative to repo root (default: .claude/commands/scrutineer-security.md)")
     sm_group = parser.add_mutually_exclusive_group()
     sm_group.add_argument("--service-map", "-s", default=None,
                           help="Path to servicemap.json for richer context. "
@@ -970,7 +970,7 @@ def main():
     parser.add_argument("--dry-run", "-n", action="store_true",
                         help="Print the generated skill to stdout without writing")
     parser.add_argument("--force", "-f", action="store_true",
-                        help="Overwrite existing security-review.md without prompting")
+                        help="Overwrite existing scrutineer-security.md without prompting")
 
     args = parser.parse_args()
 
@@ -1063,7 +1063,7 @@ def main():
     if service_map:
         reviewable = service_map.get_reviewable_components()
         print(f"  Reviewable components: {len(reviewable)} (from service map)")
-    print(f"\nUsage: /security-review (from Claude Code in the target repo)")
+    print(f"\nUsage: /scrutineer-security (from Claude Code in the target repo)")
 
 
 if __name__ == "__main__":
