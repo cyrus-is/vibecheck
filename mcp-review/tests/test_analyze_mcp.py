@@ -269,6 +269,21 @@ check("injection: benign 'before using this tool' clean",
 check("injection: benign 'succeed silently' clean",
       _inj("mkdir", "The operation will succeed silently. Good for setup.") == [])
 
+# --- Phase 6: URLs in command args get transport/credential checks ---
+def _codes(entry):
+    return {f["code"] for f in A.analyze_server("s", entry, G)["findings"]}
+
+check("args: cleartext url -> non_https_remote",
+      "non_https_remote" in _codes({"command": "npx", "args": ["-y", "mcp-remote", "http://h.example/sse"]}))
+_rc = A.analyze_server("s", {"command": "npx", "args": ["mcp-remote", "http://u:p@h.example/sse?token=abc"]}, G)
+check("args: creds-in-url detected", "credentials_in_url" in {f["code"] for f in _rc["findings"]})
+check("args: url creds redacted in args output",
+      "u:p@" not in json.dumps(_rc["args"]) and "token=abc" not in json.dumps(_rc["args"]))
+check("args: https url -> no non_https",
+      "non_https_remote" not in _codes({"command": "npx", "args": ["mcp-remote", "https://h.example/sse"]}))
+check("args: localhost http -> no non_https",
+      "non_https_remote" not in _codes({"command": "npx", "args": ["mcp-remote", "http://localhost:3000/sse"]}))
+
 # --- suppression reconcile / stale exposure ---
 fs_only = [A.analyze_server("filesystem", A.find_server_map(cfg)["filesystem"], G)]
 recon = A.reconcile(fs_only, [],

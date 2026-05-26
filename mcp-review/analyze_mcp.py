@@ -133,6 +133,19 @@ def redact_url(url: str) -> str:
     return urlunsplit((parts.scheme, netloc, parts.path, query, parts.fragment))
 
 
+_URL_IN_TEXT = re.compile(r"(https?|wss?|ftp)://\S+", re.IGNORECASE)
+
+
+def _redact_embedded_url(a: str) -> str:
+    """Redact a URL appearing inside an arg (e.g. `--endpoint=http://u:p@h`),
+    preserving any prefix. Ensures a credential-bearing URL passed as a command
+    argument never reaches the output or digest unredacted."""
+    m = _URL_IN_TEXT.search(a)
+    if not m:
+        return a
+    return a[:m.start()] + redact_url(m.group(0)) + a[m.end():]
+
+
 def mask_args(args: list) -> list:
     """Mask secret-bearing CLI args: the value after a sensitive flag, the
     value in --flag=value form, and any bare token matching a known secret
@@ -154,6 +167,9 @@ def mask_args(args: list) -> list:
                 continue
             if _SECRET_VALUE_RE.search(a):
                 out.append(_MASK)
+                continue
+            if "://" in a:
+                out.append(_redact_embedded_url(a))
                 continue
         out.append(a)
     return out
@@ -560,6 +576,36 @@ def analyze_server(name: str, entry: dict, g: Guidance) -> dict:
                 f"Server '{name}' is pointed at broad path(s): {', '.join(sorted(set(broad)))}.",
                 evidence={"paths": sorted(set(broad))},
             ))
+
+        # --- URLs embedded in command args ----------------------------------
+        # A proxy/wrapper often takes the real endpoint as an argument
+        # (`mcp-remote http://host/sse`). Give those URLs the same transport and
+        # credential checks as the url field — a cleartext or cred-bearing remote
+        # is just as exposed whether it sits in `url` or in `args`. (args are
+        # already URL-redacted above, so detection runs on the redacted form.)
+        for a in args:
+            if not isinstance(a, str) or "://" not in a:
+                continue
+            m = _URL_IN_TEXT.search(a)
+            if not m:
+                continue
+            au = m.group(0)
+            creds = url_credentials(au)
+            if creds:
+                findings.append(g.smell(
+                    "credentials_in_url",
+                    f"Server '{name}' embeds credentials in a URL passed as a "
+                    f"command argument: {creds}.",
+                    evidence={"reason": creds, "location": "command_args"},
+                ))
+            ascheme = (urlsplit(au).scheme or "").lower()
+            if ascheme in ("http", "ws") and not is_localhost(au):
+                findings.append(g.smell(
+                    "non_https_remote",
+                    f"Server '{name}' targets a cleartext '{ascheme}://' URL passed "
+                    f"as a command argument (non-localhost host).",
+                    evidence={"scheme": ascheme, "location": "command_args"},
+                ))
 
     # --- remote: transport + url creds ---------------------------------------
     if url:
