@@ -228,14 +228,25 @@ class Guidance:
             return True
         return any(m in v for m in self.placeholder_markers)
 
-    def capability_hits(self, text: str) -> list[dict]:
-        # These are RECALL-ORIENTED CANDIDATES from metadata naming, not a
-        # classification. basis="declared" marks that the signal is the tool's
-        # own description — the skill refines via schema semantics and, where
-        # available, handler source, weighting implementation over naming.
+    def capability_hits(self, name: str, description: str,
+                        param_names: list[str], param_descs: list[str]) -> list[dict]:
+        # RECALL-ORIENTED CANDIDATES from metadata, not a classification.
+        # basis="declared" marks the signal is the tool's own metadata; the skill
+        # refines via schema semantics and, where available, handler source.
+        # Each hit now carries evidence (the matched token + zone + snippet) and
+        # a confidence derived from WHERE it matched: a hit in the tool/param NAME
+        # is high-confidence; one only in prose is medium. This is what the
+        # SKILL's "basis=declared" transparency promised, and it lets the verdict
+        # layer (and the toxic-combo gate) discount weak signals.
+        zones = [
+            ("name", name or "", "high"),
+            ("param_name", " ".join(param_names), "high"),
+            ("description", " ".join([description or ""] + param_descs), "medium"),
+        ]
         hits = []
         for cap, regexes in self._cap_res.items():
-            if any(r.search(text) for r in regexes):
+            ev = _first_zone_match(regexes, zones)
+            if ev:
                 spec = self.capabilities[cap]
                 hits.append({
                     "capability": cap,
@@ -243,6 +254,8 @@ class Guidance:
                     "severity": spec.get("severity", "MEDIUM"),
                     "default_classification": spec.get("default_classification", "ask"),
                     "basis": "declared",
+                    "confidence": ev["confidence"],
+                    "evidence": {k: ev[k] for k in ("zone", "matched", "pattern", "snippet")},
                     "rationale": " ".join((spec.get("rationale", "") or "").split()),
                 })
         return hits
@@ -294,15 +307,24 @@ class Guidance:
         walk(schema)
         return out
 
-    def data_category_hits(self, text: str) -> list[dict]:
+    def data_category_hits(self, name: str, description: str,
+                          param_names: list[str], param_descs: list[str]) -> list[dict]:
+        zones = [
+            ("name", name or "", "high"),
+            ("param_name", " ".join(param_names), "high"),
+            ("description", " ".join([description or ""] + param_descs), "medium"),
+        ]
         hits = []
         for cat, regexes in self._data_res.items():
-            if any(r.search(text) for r in regexes):
+            ev = _first_zone_match(regexes, zones)
+            if ev:
                 spec = self.data_sensitivity[cat]
                 hits.append({
                     "category": cat,
                     "label": spec.get("label", cat),
                     "tier": spec.get("tier", "medium"),
+                    "confidence": ev["confidence"],
+                    "evidence": {k: ev[k] for k in ("zone", "matched", "pattern", "snippet")},
                     "rationale": " ".join((spec.get("rationale", "") or "").split()),
                 })
         return hits
@@ -679,17 +701,81 @@ def extract_tools(payload) -> list[dict]:
     return []
 
 
+def _schema_param_text(schema) -> tuple[list[str], list[str]]:
+    """Recursively collect (property_names, descriptions) from a JSON Schema.
+
+    Deliberately EXCLUDES meta-keys ($schema/$id/$ref), type strings, enum and
+    default VALUES — i.e. everything that is not a human-meaningful name or
+    description. Matching capability/data regexes against the full
+    canonical(schema) blob is what made 'http' in the "$schema":"http://..."
+    dialect URL light up network_egress on every tool; names + descriptions are
+    the only zones an evader actually uses."""
+    names, descs = [], []
+
+    def walk(node, depth=0):
+        if depth > 6 or not isinstance(node, dict):
+            return
+        d = node.get("description")
+        if isinstance(d, str) and d:
+            descs.append(d)
+        props = node.get("properties")
+        if isinstance(props, dict):
+            for pname, pspec in props.items():
+                names.append(str(pname))
+                walk(pspec, depth + 1)
+        items = node.get("items")
+        if isinstance(items, dict):
+            walk(items, depth + 1)
+        elif isinstance(items, list):
+            for it in items:
+                walk(it, depth + 1)
+        for comb in ("oneOf", "anyOf", "allOf"):
+            for sub in node.get(comb, []) or []:
+                walk(sub, depth + 1)
+        ap = node.get("additionalProperties")
+        if isinstance(ap, dict):
+            walk(ap, depth + 1)
+
+    walk(schema if isinstance(schema, dict) else {})
+    return names, descs
+
+
+def _first_zone_match(regexes: list, zones: list) -> dict | None:
+    """Search ordered (zone_name, text, confidence) tuples and return the FIRST
+    match — zones are passed highest-confidence-first, so the returned evidence
+    carries the strongest basis for the hit (a match in the tool/param NAME is
+    worth more than one buried in prose). snippet gives a reviewer the span to
+    confirm or dismiss the candidate without re-deriving it."""
+    for zone_name, text, conf in zones:
+        if not text:
+            continue
+        for r in regexes:
+            m = r.search(text)
+            if m:
+                s, e = m.start(), m.end()
+                return {
+                    "zone": zone_name,
+                    "matched": m.group(0),
+                    "pattern": r.pattern,
+                    "confidence": conf,
+                    "snippet": text[max(0, s - 30):e + 30].strip(),
+                }
+    return None
+
+
 def analyze_tool(tool: dict, server_name: str | None, g: Guidance) -> dict:
     name = tool.get("name", "")
     description = tool.get("description", "") or ""
     schema = tool.get("inputSchema") or tool.get("input_schema") or {}
 
-    # Capability scan runs over name + description + the schema text, so a
-    # parameter named "command" or "url" is caught even if the description is
-    # vague.
-    haystack = " ".join([name, description, canonical(schema)])
-    caps = g.capability_hits(haystack)
-    data_categories = g.data_category_hits(haystack)
+    # Capability/data scans run over zoned metadata — the tool name, the schema
+    # PROPERTY NAMES, and the descriptions (tool + nested params) — NOT the raw
+    # canonical(schema) blob. That keeps a parameter named "command" or "url" in
+    # scope while excluding meta-keys, type strings, and values (the "$schema"
+    # dialect URL, enum/default strings) that produced systematic false hits.
+    param_names, param_descs = _schema_param_text(schema)
+    caps = g.capability_hits(name, description, param_names, param_descs)
+    data_categories = g.data_category_hits(name, description, param_names, param_descs)
     schema_signals = g.schema_intent_signals(schema)
 
     identity = {"name": name, "description": description, "inputSchema": schema}

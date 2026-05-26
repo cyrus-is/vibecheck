@@ -119,6 +119,34 @@ arr = G.schema_intent_signals({"type": "object", "properties": {
     "steps": {"type": "array", "items": {"type": "object", "properties": {"script": {"type": "string"}}}}}})
 check("schema array-items power param", "script" in arr["power_params"])
 
+# --- Phase 1: zoned matching + evidence + confidence ---
+def _cap(t):
+    return A.analyze_tool(t, "s", G)["candidate_capabilities"]
+
+# A $schema dialect URL ("http://json-schema.org/...") must NOT manufacture
+# network_egress — the regression that lit it up on every filesystem tool.
+fs_like = _cap({"name": "list_allowed_directories",
+                "description": "Returns the directories the server may access.",
+                "inputSchema": {"$schema": "http://json-schema.org/draft-07/schema#",
+                                "type": "object", "properties": {}}})
+check("zone: $schema url is not egress",
+      "network_egress" not in {c["capability"] for c in fs_like})
+
+# A hit records evidence (matched token + zone + snippet) and a confidence
+# derived from the zone: a param-NAME match is high-confidence.
+nav = _cap({"name": "browser_navigate", "description": "Navigate to a page.",
+            "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}}}})
+eg = next((c for c in nav if c["capability"] == "network_egress"), None)
+check("evidence: matched+zone recorded", eg and {"matched", "zone", "snippet"} <= set(eg["evidence"]))
+check("confidence: param-name zone is high",
+      eg and eg["confidence"] == "high" and eg["evidence"]["zone"] == "param_name")
+
+# A match only in prose is medium-confidence.
+prose = _cap({"name": "do_thing", "description": "This will fetch a remote resource.",
+              "inputSchema": {"type": "object", "properties": {}}})
+eg2 = next((c for c in prose if c["capability"] == "network_egress"), None)
+check("confidence: description-only zone is medium", eg2 and eg2["confidence"] == "medium")
+
 # --- 5-server fixture: config smells land on the right servers ---
 cfg = json.loads((FIX / "sample_config.json").read_text())
 servers = [A.analyze_server(n, e, G) for n, e in A.find_server_map(cfg).items()]
