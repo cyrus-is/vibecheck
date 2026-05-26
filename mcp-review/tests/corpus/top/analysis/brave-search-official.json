@@ -120,7 +120,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "with title, description, and URL.\n    \n    When the \"results_f"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -136,7 +136,7 @@
           "evidence": {
             "zone": "description",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "details, refer to the Goggles repository (i.e., https://github.com/bra"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -149,7 +149,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": ", or current topics\n        - Location-based queries (restaurants, b"
           },
           "rationale": "Physical tracking risk."
@@ -162,8 +162,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "y country search lang ui lang count offset safesearch freshness t"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "y country search_lang ui_lang count offset safesearch freshness t"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -210,7 +210,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "The parameter supports both a url where the Goggle is hosted or"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -226,7 +226,7 @@
           "evidence": {
             "zone": "description",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "details, refer to the Goggles repository (i.e., https://github.com/bra"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -239,7 +239,7 @@
           "evidence": {
             "zone": "description",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "API provides enrichments for location search results. Access to thi"
           },
           "rationale": "Physical tracking risk."
@@ -252,8 +252,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "y country search lang ui lang count offset safesearch freshness t"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "y country search_lang ui_lang count offset safesearch freshness t"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -294,7 +294,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "o-related results with title, url, description, duration, and t"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -310,8 +310,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "y country search lang ui lang count offset spellcheck safesearch"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "y country search_lang ui_lang count offset spellcheck safesearch"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -349,7 +349,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "image.title](image.properties.url)).\n The user's search query."
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -365,8 +365,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "query country search lang count safesearch spellcheck"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "query country search_lang count safesearch spellcheck query c"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -409,7 +409,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "s-related results with title, url, and description. Some result"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -425,7 +425,7 @@
           "evidence": {
             "zone": "description",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "details, refer to the Goggles repository (i.e., https://github.com/bra"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -438,8 +438,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "y country search lang ui lang count offset spellcheck safesearch"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "y country search_lang ui_lang count offset spellcheck safesearch"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -518,7 +518,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "maximum number of tokens per url maximum number of snippets pe"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -534,7 +534,7 @@
           "evidence": {
             "zone": "description",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "details, refer to the Goggles repository (i.e., https://github.com/bra"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -547,7 +547,7 @@
           "evidence": {
             "zone": "description",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "ttribute of the response. The latitude of the client's geographical"
           },
           "rationale": "Physical tracking risk."
@@ -560,8 +560,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "query country search lang count spellcheck maximum number of"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "query country search_lang count spellcheck maximum_number_of_"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -639,7 +639,7 @@
           "evidence": {
             "zone": "description",
             "matched": "contact",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "data (postal address, hours, contact, ratings, photos, categories,"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -652,7 +652,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "query radius count latitude longitude location country se"
           },
           "rationale": "Physical tracking risk."
@@ -665,7 +665,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "query radius count latitude longitude location c"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."

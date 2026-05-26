@@ -272,8 +272,8 @@ dangerous_capabilities:
     patterns:
       # 'system' dropped as a bare token — it matched "file system" /
       # "snapshot system". Kept only as system_call / system_command.
-      - "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|run[_-]?script)\\b"
-      - "\\b(interpreter|sandbox\\s*escape|child[_-]?process|system[_-]?(call|command))\\b"
+      - "\\b(exec|execute|eval|spawn|subprocess|shell|run[\\s_-]?command|run[\\s_-]?code|run[\\s_-]?script)\\b"
+      - "\\b(interpreter|sandbox\\s*escape|child[\\s_-]?process|system[\\s_-]?(call|command))\\b"
     rationale: >
       A tool that runs arbitrary commands or code is the highest-impact surface
       an MCP server can expose — it collapses every other boundary.
@@ -283,8 +283,8 @@ dangerous_capabilities:
     severity: MEDIUM
     default_classification: ask
     patterns:
-      - "\\b(write|create|save|put|upload|append|modify|edit|patch)[_-]?file\\b"
-      - "\\bwrite[_-]?(to[_-]?)?(disk|fs|path)\\b"
+      - "\\b(write|create|save|put|upload|append|modify|edit|patch)[\\s_-]?file\\b"
+      - "\\bwrite[\\s_-]?(to[\\s_-]?)?(disk|fs|path)\\b"
     rationale: >
       Write access lets a server plant files, overwrite configs, or stage a
       later code-execution path.
@@ -294,11 +294,13 @@ dangerous_capabilities:
     severity: MEDIUM
     default_classification: ask
     patterns:
-      # Underscore-joined names (read_local_file, read_text_file, get_file_contents)
-      # plus prose ("read any file") and the explicit forms.
-      - "\\b(read|get|load|open|cat|slurp|retrieve)[_-]?(\\w+[_-])?(file|files|text|contents?|document|media)\\b"
+      # Adjacent forms (read_file, read_text_file, get_file_contents). Multi-segment
+      # names (read_local_file) and prose ("read any file") are caught by the
+      # proximity pattern below. NB: no greedy "(\\w+ )?" middle here — with space
+      # tolerance it matched prose like "get the content" (web content, not a file).
+      - "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b"
       - "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b"
-      - "\\b(read[_-]?file|get[_-]?file|file[_-]?contents?|read[_-]?text)\\b"
+      - "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?contents?|read[\\s_-]?text)\\b"
     rationale: >
       Reading file contents is the most common SOURCE half of an exfiltration
       chain — pair it with any network_egress tool and the server can read a
@@ -314,7 +316,7 @@ dangerous_capabilities:
       # matched "remove domains", "Destroy the browser session", drag-and-"drop".
       # Pattern 1: adjacent (delete_file / removepath). Pattern 2: a destructive
       # verb within a few words of a file/path noun ("remove a file").
-      - "\\b(delete|remove|unlink|destroy|erase|purge|truncate|wipe)[_-]?(file|files|path|dir|directory|folder)\\b"
+      - "\\b(delete|remove|unlink|destroy|erase|purge|truncate|wipe)[\\s_-]?(file|files|path|dir|directory|folder)\\b"
       - "\\b(delete|remove|unlink|destroy|erase|purge|wipe)\\b[^.]{0,15}?\\b(file|path|directory|folder)\\b"
       - "\\b(unlink|rmdir)\\b"
       - "\\brm\\s+-[rf]"
@@ -332,8 +334,8 @@ dangerous_capabilities:
       # "git remote"). This now keys on FREE-FORM egress signals (a fetch/curl/
       # webhook verb or a url/endpoint param) — the kind that can target an
       # attacker-chosen host — not on every server that happens to call an API.
-      - "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b"
-      - "\\b(url|uri|endpoint|external[_-]?api)\\b"
+      - "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b"
+      - "\\b(url|uri|endpoint|external[\\s_-]?api)\\b"
     rationale: >
       A tool that makes outbound calls can exfiltrate anything it can read
       (including the server's own credentials) to an attacker-chosen host.
@@ -343,11 +345,11 @@ dangerous_capabilities:
     severity: HIGH
     default_classification: ask
     patterns:
-      - "\\b(secret|credential|api[_-]?key|password|passwd|keychain|vault)\\b"
+      - "\\b(secret|credential|api[\\s_-]?key|password|passwd|keychain|vault)\\b"
       # 'token' split out with a negative lookahead so "token limit(s)" (LLM
       # context windows) doesn't read as credential access.
       - "\\btoken\\b(?!\\s+limit)"
-      - "\\b(read[_-]?env|environment[_-]?variable|getenv|dotenv)\\b"
+      - "\\b(read[\\s_-]?env|environment[\\s_-]?variable|getenv|dotenv)\\b"
     rationale: >
       A tool that surfaces secrets pairs dangerously with any network_egress
       tool on the same server — read-then-send is a complete exfil chain.
@@ -361,10 +363,10 @@ dangerous_capabilities:
       # nearly every web-search tool. Now requires a real datastore signal or a
       # db-qualified query.
       - "\\b(sql|psql|nosql|mongo(db)?|redis|sqlite|postgres|cypher)\\b"
-      - "\\b(database|db|datastore)[_-]?(query|exec|execute|connection|table|schema|record)\\b"
-      - "\\bexecute[_-]?query\\b"
+      - "\\b(database|db|datastore)[\\s_-]?(query|exec|execute|connection|table|schema|record)\\b"
+      - "\\bexecute[\\s_-]?query\\b"
       - "\\bselect\\b.{0,40}\\bfrom\\b"
-      - "\\bdrop[_-]?(table|database|collection)\\b"
+      - "\\bdrop[\\s_-]?(table|database|collection)\\b"
     rationale: >
       Raw query access bypasses application-level authorization and tenant
       scoping; injection in a tool parameter reaches the data directly.
@@ -378,9 +380,9 @@ dangerous_capabilities:
       # cause", "grant access to docs". Now requires an actual priv-change verb
       # or a qualified root/admin reference.
       - "\\b(sudo|setuid|setgid|chmod|chown|chgrp|chattr)\\b"
-      - "\\b(privilege[_-]?escalat|escalate[_-]?privilege|elevate[_-]?(privilege|permission|access))\\b"
-      - "\\bgrant[_-]?(role|privilege|permission|access|admin|scope)\\b"
-      - "\\broot[_-]?(access|shell|user|account|privilege)\\b"
+      - "\\b(privilege[\\s_-]?escalat|escalate[\\s_-]?privilege|elevate[\\s_-]?(privilege|permission|access))\\b"
+      - "\\bgrant[\\s_-]?(role|privilege|permission|access|admin|scope)\\b"
+      - "\\broot[\\s_-]?(access|shell|user|account|privilege)\\b"
     rationale: >
       Tools that alter permissions or escalate privilege can expand their own
       blast radius and persist access.
@@ -413,9 +415,9 @@ data_sensitivity:
     label: Secrets, tokens & credentials
     tier: critical
     patterns:
-      - "\\b(secret|credential|api[_-]?key|password|keychain|vault|private[_-]?key)\\b"
+      - "\\b(secret|credential|api[\\s_-]?key|password|keychain|vault|private[\\s_-]?key)\\b"
       - "\\btoken\\b(?!\\s+limit)"
-      - "\\b(read[_-]?env|environment[_-]?variable|getenv|dotenv)\\b"
+      - "\\b(read[\\s_-]?env|environment[\\s_-]?variable|getenv|dotenv)\\b"
     rationale: The most sensitive payload — leaks compromise everything downstream.
 
   communications_content:
@@ -423,7 +425,7 @@ data_sensitivity:
     tier: critical
     patterns:
       - "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b"
-      - "\\b(read|get|fetch|list|search|export)[_-]?(message|email|dm|chat|conversation|thread)s?\\b"
+      - "\\b(read|get|fetch|list|search|export)[\\s_-]?(message|email|dm|chat|conversation|thread)s?\\b"
     rationale: Full text of private communications — the actual content, not just who talked to whom.
 
   source_code:
@@ -431,15 +433,15 @@ data_sensitivity:
     tier: critical
     patterns:
       # bare 'branch' dropped — it matched "thought branch" on a reasoning tool.
-      - "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b"
-      - "\\b(read|get|search)[_-]?(code|file)\\b.*\\b(repo|repository|src|source)\\b"
+      - "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b"
+      - "\\b(read|get|search)[\\s_-]?(code|file)\\b.*\\b(repo|repository|src|source)\\b"
     rationale: Proprietary logic, embedded secrets, and architecture all live in source.
 
   financial:
     label: Financial / payment data
     tier: critical
     patterns:
-      - "\\b(payment|invoice|transaction|billing|credit[_-]?card|bank|salary|payroll|ledger|account[_-]?balance)\\b"
+      - "\\b(payment|invoice|transaction|billing|credit[\\s_-]?card|bank|salary|payroll|ledger|account[\\s_-]?balance)\\b"
     rationale: Direct financial exposure and a regulated data class.
 
   health:
@@ -453,15 +455,15 @@ data_sensitivity:
     label: Personal identifiers (PII)
     tier: high
     patterns:
-      - "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b"
-      - "\\b(user|customer|person)[_-]?(info|details|profile|record)\\b"
+      - "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b"
+      - "\\b(user|customer|person)[\\s_-]?(info|details|profile|record)\\b"
     rationale: Identifies real people; aggregation enables tracking and de-anonymization.
 
   files_documents:
     label: File & document contents
     tier: high
     patterns:
-      - "\\b(read[_-]?file|get[_-]?file|file[_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b"
+      - "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b"
     rationale: Documents routinely contain secrets, PII, and proprietary material.
 
   calendar:
@@ -475,14 +477,14 @@ data_sensitivity:
     label: Contacts & address book
     tier: high
     patterns:
-      - "\\b(contact|address[_-]?book|directory|roster|connections)\\b"
+      - "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b"
     rationale: Exposes a person's full social/professional graph.
 
   location:
     label: Location data
     tier: high
     patterns:
-      - "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b"
+      - "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b"
     rationale: Physical tracking risk.
 
   browsing_history:
@@ -491,22 +493,22 @@ data_sensitivity:
     patterns:
       # "history" alone is too broad (e.g. "message history"); require a
       # browsing/web qualifier or a concrete browsing artifact.
-      - "\\b(browsing|browser|web)[_-]?history\\b"
-      - "\\b(bookmarks|visited[_-]?(url|site|page)s?)\\b"
+      - "\\b(browsing|browser|web)[\\s_-]?history\\b"
+      - "\\b(bookmarks|visited[\\s_-]?(url|site|page)s?)\\b"
     rationale: A detailed behavioral profile of the user.
 
   system_state:
     label: System / process / environment state
     tier: high
     patterns:
-      - "\\b(process[_-]?list|running[_-]?process|hostname|system[_-]?info|env[_-]?(var|dump)|ps\\s|netstat)\\b"
+      - "\\b(process[\\s_-]?list|running[\\s_-]?process|hostname|system[\\s_-]?info|env[\\s_-]?(var|dump)|ps\\s|netstat)\\b"
     rationale: Host fingerprinting and often an indirect path to secrets.
 
   communications_metadata:
     label: Communication metadata (who / where / when)
     tier: medium
     patterns:
-      - "\\b(list[_-]?(channel|conversation|member|participant)s?|channel[_-]?list|presence|who[_-]?is|members?)\\b"
+      - "\\b(list[\\s_-]?(channel|conversation|member|participant)s?|channel[\\s_-]?list|presence|who[\\s_-]?is|members?)\\b"
     rationale: Not the message bodies, but the social graph and channel structure.
 
   project_metadata:
@@ -514,19 +516,19 @@ data_sensitivity:
     tier: medium
     patterns:
       - "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b"
-      - "\\b(list|get)[_-]?(project|task|issue|ticket)s?\\b"
+      - "\\b(list|get)[\\s_-]?(project|task|issue|ticket)s?\\b"
     rationale: Names, statuses, and structure of work — identifying but not the underlying content.
 
   org_structure:
     label: Org / team structure
     tier: medium
     patterns:
-      - "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b"
+      - "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b"
     rationale: Reveals headcount, hierarchy, and reporting relationships.
 
   public_data:
     label: Public / aggregate data
     tier: low
     patterns:
-      - "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b"
+      - "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b"
     rationale: Already public or non-identifying — minimal exposure.

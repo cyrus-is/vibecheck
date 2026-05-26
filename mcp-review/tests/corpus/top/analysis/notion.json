@@ -128,7 +128,7 @@
           "evidence": {
             "zone": "description",
             "matched": "endpoint",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "s:\n400: 400 If supplied, this endpoint will return a page of results"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -241,7 +241,7 @@
           "evidence": {
             "zone": "description",
             "matched": "endpoint",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "(ref:block) If supplied, this endpoint will return a page of results"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -388,8 +388,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
-            "snippet": "ved icon emoji cover external url type"
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
+            "snippet": "ved icon emoji cover external url type page id Notion Version p"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
           "suppressed": false
@@ -474,7 +474,7 @@
           "evidence": {
             "zone": "description",
             "matched": "endpoint",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "ock or page If supplied, this endpoint will return a page of results"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",

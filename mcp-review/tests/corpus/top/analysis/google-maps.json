@@ -105,7 +105,7 @@
           "evidence": {
             "zone": "description",
             "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "rt an address into geographic coordinates The address to geocode"
           },
           "rationale": "Physical tracking risk."
@@ -139,7 +139,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "latitude longitude"
           },
           "rationale": "Physical tracking risk."
@@ -174,7 +174,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "query location latitude longitude radius"
           },
           "rationale": "Physical tracking risk."
@@ -228,7 +228,7 @@
           "evidence": {
             "zone": "description",
             "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "Array of origin addresses or coordinates Array of destination addresse"
           },
           "rationale": "Physical tracking risk."
@@ -261,7 +261,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "locations latitude longitude"
           },
           "rationale": "Physical tracking risk."
@@ -296,7 +296,7 @@
           "evidence": {
             "zone": "description",
             "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "nts Starting point address or coordinates Ending point address or coord"
           },
           "rationale": "Physical tracking risk."

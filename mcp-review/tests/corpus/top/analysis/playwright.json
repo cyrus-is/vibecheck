@@ -188,8 +188,8 @@
           "evidence": {
             "zone": "name",
             "matched": "upload",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
-            "snippet": "browser file upload"
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
+            "snippet": "wser_file_upload browser file upload"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
           "suppressed": false
@@ -227,7 +227,7 @@
           "evidence": {
             "zone": "description",
             "matched": "uri",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "{\"text/plain\": \"hello\", \"text/uri-list\": \"https://example.com\"}"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -324,7 +324,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -379,7 +379,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "e. Only return requests whose URL matches this regexp (e.g. \"/a"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -433,12 +433,12 @@
           "severity": "HIGH",
           "default_classification": "deny",
           "basis": "declared",
-          "confidence": "medium",
+          "confidence": "high",
           "evidence": {
-            "zone": "description",
-            "matched": "execute",
-            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|run[_-]?script)\\b",
-            "snippet": "containing Playwright code to execute. It will be invoked with a si"
+            "zone": "name",
+            "matched": "run code",
+            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[\\s_-]?command|run[\\s_-]?code|run[\\s_-]?script)\\b",
+            "snippet": "owser_run_code_unsafe browser run code unsafe"
           },
           "rationale": "A tool that runs arbitrary commands or code is the highest-impact surface an MCP server can expose \u2014 it collapses every other boundary.",
           "suppressed": false
@@ -478,7 +478,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "mes to stay within the output directory. When true, takes a screensho"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -514,7 +514,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "idth,height] in the snapshot. Coordinates are viewport-relative, in CSS"
           },
           "rationale": "Physical tracking risk."
@@ -636,7 +636,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "action index url"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",

@@ -101,7 +101,24 @@
         "repo",
         "sha"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_read",
+          "title": "Filesystem read",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "file Content",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?contents?|read[\\s_-]?text)\\b",
+            "snippet": "th where to create/update the file Content of the file Commit message Br"
+          },
+          "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
         {
           "category": "communications_content",
@@ -124,10 +141,23 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo path content message branch s"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
+        },
+        {
+          "category": "files_documents",
+          "label": "File & document contents",
+          "tier": "high",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "file Content",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "th where to create/update the file Content of the file Commit message Br"
+          },
+          "rationale": "Documents routinely contain secrets, PII, and proprietary material."
         },
         {
           "category": "org_structure",
@@ -137,7 +167,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Path where t"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -149,7 +179,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "critical",
       "digest": "sha256:f033311ca8c542fccd42df73b96ada74525cb2bef9196cfbc097ed2d64254f79"
     },
@@ -194,8 +224,8 @@
           "evidence": {
             "zone": "name",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "create repository"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "create_repository create repository"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -220,7 +250,24 @@
         "path",
         "repo"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_read",
+          "title": "Filesystem read",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "get file",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "get_file_contents get file contents"
+          },
+          "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
         {
           "category": "source_code",
@@ -230,10 +277,23 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo path branch"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
+        },
+        {
+          "category": "files_documents",
+          "label": "File & document contents",
+          "tier": "high",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "get file",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "get_file_contents get file contents"
+          },
+          "rationale": "Documents routinely contain secrets, PII, and proprietary material."
         },
         {
           "category": "contacts",
@@ -243,7 +303,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "Get the contents of a file or directory from a GitHub repository Repo"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -256,7 +316,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Path to the"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -268,7 +328,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "critical",
       "digest": "sha256:8c190725e0c744c1fd5f8a082b9948b7a1bbbe824373e4251a202104262e905a"
     },
@@ -306,7 +366,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo branch files path content mes"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -319,7 +379,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Branch to pu"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -358,7 +418,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo title body assignees mileston"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -372,7 +432,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "create issue"
+            "snippet": "create_issue create issue"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -409,10 +469,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo title body head base draft ma"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "create_pull_request create pull request"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -424,7 +484,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -459,8 +519,8 @@
           "evidence": {
             "zone": "name",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "fork repository"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "fork_repository fork repository"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -472,7 +532,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "owner repo organization"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -508,8 +568,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo branch from branch"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "owner repo branch from_branch owner repo"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -521,7 +581,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Name for the"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -558,7 +618,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo sha page perPage"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -599,10 +659,23 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo direction labels page per pag"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "owner repo direction labels page per_pag"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
+        },
+        {
+          "category": "project_metadata",
+          "label": "Project / task / status metadata",
+          "tier": "medium",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "list_issues",
+            "pattern": "\\b(list|get)[\\s_-]?(project|task|issue|ticket)s?\\b",
+            "snippet": "list_issues list issues"
+          },
+          "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
       ],
       "schema_signals": {
@@ -640,8 +713,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo issue number title body assig"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "owner repo issue_number title body assig"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -654,7 +727,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "update issue"
+            "snippet": "update_issue update issue"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -689,8 +762,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo issue number body"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "owner repo issue_number body owner repo"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -703,7 +776,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "add issue comment"
+            "snippet": "add_issue_comment add issue comment"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -805,8 +878,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo issue number"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "owner repo issue_number owner repo issue"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -819,7 +892,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "get issue"
+            "snippet": "get_issue get issue"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -851,10 +924,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "get_pull_request get pull request"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -866,7 +939,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -907,7 +980,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "owner repo state head base sort directio"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -920,7 +993,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name State of the"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -957,10 +1030,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number commit id body ev"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "te_pull_request_review create pull request review"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -973,7 +1046,7 @@
             "zone": "param_name",
             "matched": "event",
             "pattern": "\\b(calendar|event|meeting|schedule|availability|appointment|invite)\\b",
-            "snippet": "po pull number commit id body event comments path position body p"
+            "snippet": "po pull_number commit_id body event comments path position body p"
           },
           "rationale": "Reveals who you meet, when, and movements/availability."
         },
@@ -985,7 +1058,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1034,10 +1107,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number commit title comm"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "merge_pull_request merge pull request"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1049,7 +1122,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1082,10 +1155,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "get_pull_request_files get pull request files"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1097,7 +1170,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1130,10 +1203,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "get_pull_request_status get pull request status"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1146,7 +1219,7 @@
             "zone": "name",
             "matched": "status",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "get pull request status"
+            "snippet": "quest_status get pull request status"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -1158,7 +1231,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1192,10 +1265,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number expected head sha"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "te_pull_request_branch update pull request branch"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1207,7 +1280,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1240,10 +1313,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "get_pull_request_comments get pull request comments"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1255,7 +1328,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1288,10 +1361,10 @@
           "tier": "critical",
           "confidence": "high",
           "evidence": {
-            "zone": "param_name",
-            "matched": "repo",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "owner repo pull number"
+            "zone": "name",
+            "matched": "pull request",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "get_pull_request_reviews get pull request reviews"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -1303,7 +1376,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Repository owner (username or organization) Repository name Pull request"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1341,6 +1414,12 @@
         "tool_count": 22,
         "confidence": "high"
       },
+      "files_documents": {
+        "label": "File & document contents",
+        "tier": "high",
+        "tool_count": 2,
+        "confidence": "high"
+      },
       "org_structure": {
         "label": "Org / team structure",
         "tier": "medium",
@@ -1356,7 +1435,7 @@
       "project_metadata": {
         "label": "Project / task / status metadata",
         "tier": "medium",
-        "tool_count": 5,
+        "tool_count": 6,
         "confidence": "high"
       },
       "calendar": {
@@ -1376,13 +1455,13 @@
     "server_count": 1,
     "tool_count": 26,
     "active_config_findings": 3,
-    "active_tool_capabilities": 0,
+    "active_tool_capabilities": 2,
     "toxic_combination_count": 0,
     "injection_finding_count": 0,
     "approval_drift_count": 0,
     "severity_counts": {
       "HIGH": 1,
-      "MEDIUM": 1,
+      "MEDIUM": 3,
       "LOW": 0,
       "INFO": 1
     },
@@ -1391,6 +1470,7 @@
       "calendar",
       "communications_content",
       "contacts",
+      "files_documents",
       "org_structure",
       "project_metadata",
       "source_code"

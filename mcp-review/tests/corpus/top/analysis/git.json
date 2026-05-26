@@ -99,8 +99,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git status"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_status git status"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -113,7 +113,7 @@
             "zone": "name",
             "matched": "status",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "git status"
+            "snippet": "git_status git status"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -146,8 +146,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git diff unstaged"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_diff_unstaged git diff unstaged"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -159,7 +159,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "Shows changes in the working directory that are not yet staged"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -193,8 +193,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git diff staged"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_diff_staged git diff staged"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -228,8 +228,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git diff"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_diff git diff"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -263,7 +263,7 @@
             "zone": "param_name",
             "matched": "message",
             "pattern": "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b",
-            "snippet": "repo path message"
+            "snippet": "repo_path message repo path message"
           },
           "rationale": "Full text of private communications \u2014 the actual content, not just who talked to whom."
         },
@@ -275,8 +275,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git commit"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_commit git commit"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -299,7 +299,24 @@
         "files",
         "repo_path"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_read",
+          "title": "Filesystem read",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "file contents",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?contents?|read[\\s_-]?text)\\b",
+            "snippet": "Adds file contents to the staging area"
+          },
+          "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
         {
           "category": "source_code",
@@ -309,8 +326,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git add"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_add git add"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -321,7 +338,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "critical",
       "digest": "sha256:f7892ff5ff8b262ac42fa1a93408e25bdcffc5df5ad87442b900ff2a145cc590"
     },
@@ -342,8 +359,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git reset"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_reset git reset"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -378,8 +395,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git log"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_log git log"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
@@ -391,8 +408,8 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
-            "snippet": "repo path max count start timestamp end timestamp"
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
+            "snippet": "p end_timestamp repo path max count start timestamp end timestamp"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
         }
@@ -426,8 +443,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git create branch"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_create_branch git create branch"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -460,8 +477,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git checkout"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_checkout git checkout"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -494,8 +511,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git show"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_show git show"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -530,8 +547,8 @@
           "evidence": {
             "zone": "name",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
-            "snippet": "git branch"
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
+            "snippet": "git_branch git branch"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         }
@@ -598,13 +615,13 @@
     "server_count": 1,
     "tool_count": 12,
     "active_config_findings": 3,
-    "active_tool_capabilities": 0,
+    "active_tool_capabilities": 1,
     "toxic_combination_count": 0,
     "injection_finding_count": 0,
     "approval_drift_count": 0,
     "severity_counts": {
       "HIGH": 1,
-      "MEDIUM": 2,
+      "MEDIUM": 3,
       "LOW": 0,
       "INFO": 0
     },

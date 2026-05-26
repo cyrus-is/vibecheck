@@ -127,7 +127,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url formats jsonOptions prompt sc"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -143,7 +143,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "tention maxAge lockdown proxy profile name saveChanges"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -156,7 +156,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "rification removeBase64Images location country languages storeInCach"
           },
           "rationale": "Physical tracking risk."
@@ -210,7 +210,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url search sitemap includeSubdoma"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -255,7 +255,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "ts that include a word in the URL | `inurl:firecrawl`\n| `allinu"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -271,7 +271,7 @@
           "evidence": {
             "zone": "description",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "words in the URL | `allinurl:git firecrawl`\n| `intitle:` | Onl"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -284,7 +284,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "tention maxAge lockdown proxy profile name saveChanges enterprise"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -297,7 +297,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "query limit tbs filter location includeDomains excludeDomains"
           },
           "rationale": "Physical tracking risk."
@@ -310,7 +310,7 @@
           "evidence": {
             "zone": "description",
             "matched": "published",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "latest research papers on AI published in 2023.\"\n**Sources:** web, i"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -350,7 +350,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "archId rating valuableSources url reason missingContent topic d"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -366,7 +366,7 @@
           "evidence": {
             "zone": "description",
             "matched": "team",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "n).\n- **Daily refund cap (per team, per UTC day, default 100 cre"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -379,7 +379,7 @@
           "evidence": {
             "zone": "description",
             "matched": "aggregate",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "s\"}`. **Be specific** \u2014 these aggregate across teams and tell us what"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -429,7 +429,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "webhook",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "reDomain delay maxConcurrency webhook webhookHeaders deduplicateSim"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -474,7 +474,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "tention maxAge lockdown proxy profile name saveChanges"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -487,7 +487,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "rification removeBase64Images location country languages storeInCach"
           },
           "rationale": "Physical tracking risk."
@@ -536,7 +536,7 @@
             "zone": "name",
             "matched": "status",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "firecrawl check crawl status"
+            "snippet": "_status firecrawl check crawl status"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -595,7 +595,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "ge extraction when you have a URL (use firecrawl_scrape, faster"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -671,7 +671,7 @@
             "zone": "name",
             "matched": "status",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "firecrawl agent status"
+            "snippet": "_agent_status firecrawl agent status"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         }
@@ -707,7 +707,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "**Returns:** Session ID, CDP URL, and live view URL."
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -723,7 +723,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "ttl activityTtl streamWebView profile name saveChanges"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -736,7 +736,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Total",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "ocol).\n\n**Arguments:**\n- ttl: Total session lifetime in seconds ("
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -772,10 +772,26 @@
           "evidence": {
             "zone": "name",
             "matched": "execute",
-            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|run[_-]?script)\\b",
-            "snippet": "firecrawl browser execute"
+            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[\\s_-]?command|run[\\s_-]?code|run[\\s_-]?script)\\b",
+            "snippet": "ser_execute firecrawl browser execute"
           },
           "rationale": "A tool that runs arbitrary commands or code is the highest-impact surface an MCP server can expose \u2014 it collapses every other boundary.",
+          "suppressed": false
+        },
+        {
+          "capability": "file_read",
+          "title": "Filesystem read",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "get text",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "fill element\n- `agent-browser get text @e1` \u2014 Get text content\n- `ag"
+          },
+          "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
         },
         {
@@ -788,7 +804,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nds:**\n- `agent-browser open <url>` \u2014 Navigate to URL\n- `agent-"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -882,7 +898,7 @@
           "evidence": {
             "zone": "description",
             "matched": "execute",
-            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|run[_-]?script)\\b",
+            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[\\s_-]?command|run[\\s_-]?code|run[\\s_-]?script)\\b",
             "snippet": "this OR code)\n- code: Code to execute in the browser session (use t"
           },
           "rationale": "A tool that runs arbitrary commands or code is the highest-impact surface an MCP server can expose \u2014 it collapses every other boundary.",
@@ -954,7 +970,7 @@
           "evidence": {
             "zone": "description",
             "matched": "endpoint",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "ted Firecrawl API's /v2/parse endpoint.\nThis is the fastest and most"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -970,7 +986,7 @@
           "evidence": {
             "zone": "description",
             "matched": "invoice",
-            "pattern": "\\b(payment|invoice|transaction|billing|credit[_-]?card|bank|salary|payroll|ledger|account[_-]?balance)\\b",
+            "pattern": "\\b(payment|invoice|transaction|billing|credit[\\s_-]?card|bank|salary|payroll|ledger|account[\\s_-]?balance)\\b",
             "snippet": "uments\": {\n    \"filePath\": \"./invoice.html\",\n    \"formats\": [\"json\""
           },
           "rationale": "Direct financial exposure and a regulated data class."
@@ -983,7 +999,7 @@
           "evidence": {
             "zone": "description",
             "matched": "document",
-            "pattern": "\\b(read[_-]?file|get[_-]?file|file[_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
             "snippet": "way to extract content from a document on disk \u2014 if the file lives l"
           },
           "rationale": "Documents routinely contain secrets, PII, and proprietary material."
@@ -996,7 +1012,7 @@
           "evidence": {
             "zone": "description",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "geTracking); setting waitFor, location, mobile, or a non-basic/auto"
           },
           "rationale": "Physical tracking risk."
@@ -1009,7 +1025,7 @@
           "evidence": {
             "zone": "description",
             "matched": "public",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "don't want to host it on the public web first; pulling structured"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -1043,7 +1059,7 @@
           "evidence": {
             "zone": "description",
             "matched": "webhook",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "', url: '...' }`). Optional: `webhook`, `notification`, `retentionD"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1072,7 +1088,7 @@
           "evidence": {
             "zone": "description",
             "matched": "diff",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "check produces a unified text diff of the page's markdown. No ex"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -1159,7 +1175,7 @@
           "evidence": {
             "zone": "description",
             "matched": "webhook",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "ed\"), `schedule`, `targets`, `webhook`, `notification`, `retentionD"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1313,7 +1329,7 @@
           "evidence": {
             "zone": "description",
             "matched": "fetch",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "Increase `limit` (max 100) to fetch fewer pages.\n\n**Usage Example"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1329,7 +1345,7 @@
           "evidence": {
             "zone": "description",
             "matched": "diff",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "single check with page-level diff results. Filter `pageStatus`"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -1495,13 +1511,13 @@
     "server_count": 1,
     "tool_count": 24,
     "active_config_findings": 3,
-    "active_tool_capabilities": 15,
+    "active_tool_capabilities": 16,
     "toxic_combination_count": 3,
     "injection_finding_count": 0,
     "approval_drift_count": 0,
     "severity_counts": {
       "HIGH": 4,
-      "MEDIUM": 16,
+      "MEDIUM": 17,
       "LOW": 0,
       "INFO": 1
     },

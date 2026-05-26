@@ -258,14 +258,14 @@ class Guidance:
         # is high-confidence; one only in prose is medium. This is what the
         # SKILL's "basis=declared" transparency promised, and it lets the verdict
         # layer (and the toxic-combo gate) discount weak signals.
-        # Normalize _/- to spaces in the NAME/param zones so word-boundary
-        # patterns fire on each token: "read_secret" -> "read secret",
-        # "run_shell_command" -> "run shell command". Without this, \b-anchored
-        # patterns never match underscore-joined tool names, so a genuinely
-        # dangerous tool only ever matched (medium-confidence) in its prose.
+        # NAME/param zones carry BOTH the raw identifier and a _/--normalized
+        # copy ("write_file write file"). The normalized copy lets word-boundary
+        # patterns fire on each token (\bsecret\b in "read_secret"); the raw copy
+        # keeps adjacency patterns working (write[_-]?file in "write_file") —
+        # normalizing alone breaks those because [_-]? doesn't match the space.
         zones = [
-            ("name", _norm(name), "high"),
-            ("param_name", _norm(" ".join(param_names)), "high"),
+            ("name", _both(name), "high"),
+            ("param_name", _both(" ".join(param_names)), "high"),
             ("description", " ".join([description or ""] + param_descs), "medium"),
         ]
         hits = []
@@ -350,8 +350,8 @@ class Guidance:
     def data_category_hits(self, name: str, description: str,
                           param_names: list[str], param_descs: list[str]) -> list[dict]:
         zones = [
-            ("name", _norm(name), "high"),
-            ("param_name", _norm(" ".join(param_names)), "high"),
+            ("name", _both(name), "high"),
+            ("param_name", _both(" ".join(param_names)), "high"),
             ("description", " ".join([description or ""] + param_descs), "medium"),
         ]
         hits = []
@@ -816,6 +816,15 @@ def _norm(s: str) -> str:
     return re.sub(r"[_\-]+", " ", s or "")
 
 
+def _both(s: str) -> str:
+    """Raw identifier + its normalized copy, so adjacency patterns (write[_-]?file)
+    match the raw form AND word-boundary patterns (\\bsecret\\b) match the
+    normalized form. Normalizing alone breaks adjacency (space != [_-])."""
+    s = s or ""
+    n = _norm(s)
+    return s if n == s else f"{s} {n}"
+
+
 def _first_zone_match(regexes: list, zones: list) -> dict | None:
     """Search ordered (zone_name, text, confidence) tuples and return the FIRST
     match — zones are passed highest-confidence-first, so the returned evidence
@@ -987,7 +996,7 @@ def toxic_combinations(servers: list[dict], tools: list[dict]) -> list[dict]:
     # be pointed at any file (a secret, a config) — that's what makes read+egress
     # a HIGH exfil primitive rather than a benign scoped read.
     _PATH_PARAMS = {"path", "file_path", "filepath", "filename", "file", "paths",
-                    "dir", "directory", "uri", "location"}
+                    "dir", "directory", "folder"}  # local-file paths only — not uri/location (URL/geo)
     arbitrary_read = broad_fs or any(
         any(c["capability"] == "file_read" for c in t["candidate_capabilities"])
         and (_PATH_PARAMS & {p.lower() for p in t.get("param_names", [])})

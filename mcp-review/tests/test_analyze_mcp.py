@@ -175,6 +175,18 @@ check("tp: chmod is privilege_escalation", "privilege_escalation" in _caps("set_
 check("tp: url param is network_egress",
       "network_egress" in _caps("navigate", "Go to a page.", {"url": {"type": "string"}}))
 
+# Regression: snake_case tool NAMES must trip adjacency patterns. Name
+# normalization (_/- -> space, for \b matching) once broke write[_-]?file etc.;
+# the fix feeds both the raw + normalized name AND makes separators space-tolerant.
+check("snake: write_file -> file_write", "file_write" in _caps("write_file", ""))
+check("snake: edit_file -> file_write", "file_write" in _caps("edit_file", ""))
+check("snake: run_command -> code_execution", "code_execution" in _caps("run_command", ""))
+check("snake: get_api_key -> secrets_access", "secrets_access" in _caps("get_api_key", ""))
+check("snake: read_secret -> secrets_access", "secrets_access" in _caps("read_secret", ""))
+check("snake: send_to_webhook -> network_egress", "network_egress" in _caps("send_to_webhook", ""))
+check("snake: read_file -> file_read", "file_read" in _caps("read_file", ""))
+check("snake: delete_file -> file_delete", "file_delete" in _caps("delete_file", ""))
+
 # --- 5-server fixture: config smells land on the right servers ---
 cfg = json.loads((FIX / "sample_config.json").read_text())
 servers = [A.analyze_server(n, e, G) for n, e in A.find_server_map(cfg).items()]

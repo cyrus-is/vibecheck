@@ -127,8 +127,8 @@
           "evidence": {
             "zone": "name",
             "matched": "fetch",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
-            "snippet": "web fetch exa"
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
+            "snippet": "web_fetch_exa web fetch exa"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
           "suppressed": false

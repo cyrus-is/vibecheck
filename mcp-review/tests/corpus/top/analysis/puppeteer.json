@@ -90,7 +90,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url launchOptions allowDangerous"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -130,7 +130,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URI",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "shot as a base64-encoded data URI (as text) instead of binary i"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -244,7 +244,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Execute",
-            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[_-]?command|run[_-]?code|run[_-]?script)\\b",
+            "pattern": "\\b(exec|execute|eval|spawn|subprocess|shell|run[\\s_-]?command|run[\\s_-]?code|run[\\s_-]?script)\\b",
             "snippet": "Execute JavaScript in the browser con"
           },
           "rationale": "A tool that runs arbitrary commands or code is the highest-impact surface an MCP server can expose \u2014 it collapses every other boundary.",

@@ -100,6 +100,19 @@
       "candidate_capabilities": [],
       "data_categories": [
         {
+          "category": "communications_metadata",
+          "label": "Communication metadata (who / where / when)",
+          "tier": "medium",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "list channels",
+            "pattern": "\\b(list[\\s_-]?(channel|conversation|member|participant)s?|channel[\\s_-]?list|presence|who[\\s_-]?is|members?)\\b",
+            "snippet": "slack_list_channels slack list channels"
+          },
+          "rationale": "Not the message bodies, but the social graph and channel structure."
+        },
+        {
           "category": "org_structure",
           "label": "Org / team structure",
           "tier": "medium",
@@ -107,7 +120,7 @@
           "evidence": {
             "zone": "description",
             "matched": "workspace",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "r pre-defined channels in the workspace with pagination Maximum numbe"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -120,7 +133,7 @@
           "evidence": {
             "zone": "description",
             "matched": "public",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "List public or pre-defined channels in th"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -144,7 +157,24 @@
         "channel_id",
         "text"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "network_egress",
+          "title": "Outbound network / data egress",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "post to",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
+            "snippet": "nnel The ID of the channel to post to The message text to post"
+          },
+          "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
         {
           "category": "communications_content",
@@ -155,7 +185,7 @@
             "zone": "name",
             "matched": "message",
             "pattern": "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b",
-            "snippet": "slack post message"
+            "snippet": "slack_post_message slack post message"
           },
           "rationale": "Full text of private communications \u2014 the actual content, not just who talked to whom."
         }
@@ -166,7 +196,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "critical",
       "digest": "sha256:9e5e1bed86588c0dd5d1628aad4af006fe76e02946d7a6b4313c4d3fd8bac12e"
     },
@@ -190,7 +220,7 @@
             "zone": "name",
             "matched": "reply",
             "pattern": "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b",
-            "snippet": "slack reply to thread"
+            "snippet": "slack_reply_to_thread slack reply to thread"
           },
           "rationale": "Full text of private communications \u2014 the actual content, not just who talked to whom."
         }
@@ -279,7 +309,7 @@
             "zone": "name",
             "matched": "thread",
             "pattern": "\\b(message|email|e-mail|mail|dm|chat|conversation|thread|inbox|reply)\\b",
-            "snippet": "slack get thread replies"
+            "snippet": "_get_thread_replies slack get thread replies"
           },
           "rationale": "Full text of private communications \u2014 the actual content, not just who talked to whom."
         }
@@ -312,7 +342,7 @@
           "evidence": {
             "zone": "description",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "he workspace with their basic profile information Pagination cursor"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -325,7 +355,7 @@
           "evidence": {
             "zone": "description",
             "matched": "workspace",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "et a list of all users in the workspace with their basic profile info"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -358,8 +388,8 @@
           "evidence": {
             "zone": "name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
-            "snippet": "slack get user profile"
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
+            "snippet": "t_user_profile slack get user profile"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
         }
@@ -385,6 +415,12 @@
       "low"
     ],
     "categories": {
+      "communications_metadata": {
+        "label": "Communication metadata (who / where / when)",
+        "tier": "medium",
+        "tool_count": 1,
+        "confidence": "high"
+      },
       "org_structure": {
         "label": "Org / team structure",
         "tier": "medium",
@@ -411,7 +447,31 @@
       }
     }
   },
-  "toxic_combinations": [],
+  "toxic_combinations": [
+    {
+      "id": "exfil_chain",
+      "severity": "MEDIUM",
+      "title": "Read-then-send exfiltration chain",
+      "detail": "The server can both access secrets/credentials and make outbound network calls \u2014 a path to exfiltrate them to an attacker-chosen host. No tool explicitly reads secrets \u2014 this is the server's own required credential plus an egress path (true of most credentialed API servers); confirm egress targets are fixed/trusted before treating as active exfiltration.",
+      "contributing": [
+        "sensitive_env_required",
+        "network_egress"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "id": "read_and_exfil",
+      "severity": "MEDIUM",
+      "title": "File/message read paired with egress",
+      "detail": "The server can read file/message contents and make outbound network calls \u2014 a read-then-send exfiltration path. Severity is MEDIUM because the read appears scoped; confirm what the read tool can reach and where egress can target.",
+      "contributing": [
+        "file_read",
+        "communications_content",
+        "network_egress"
+      ],
+      "confidence": "medium"
+    }
+  ],
   "injection_findings": [],
   "approval_drift": [],
   "granted": null,
@@ -420,19 +480,20 @@
     "server_count": 1,
     "tool_count": 8,
     "active_config_findings": 3,
-    "active_tool_capabilities": 0,
-    "toxic_combination_count": 0,
+    "active_tool_capabilities": 1,
+    "toxic_combination_count": 2,
     "injection_finding_count": 0,
     "approval_drift_count": 0,
     "severity_counts": {
       "HIGH": 1,
-      "MEDIUM": 1,
+      "MEDIUM": 4,
       "LOW": 0,
       "INFO": 1
     },
     "data_sensitivity_rating": "HIGHLY_SENSITIVE",
     "data_categories_touched": [
       "communications_content",
+      "communications_metadata",
       "org_structure",
       "personal_identifiers",
       "public_data"

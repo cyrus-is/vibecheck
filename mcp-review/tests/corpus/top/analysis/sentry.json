@@ -90,6 +90,19 @@
             "snippet": "to:\n- Get the user's name and email address."
           },
           "rationale": "Full text of private communications \u2014 the actual content, not just who talked to whom."
+        },
+        {
+          "category": "personal_identifiers",
+          "label": "Personal identifiers (PII)",
+          "tier": "high",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "email address",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
+            "snippet": "to:\n- Get the user's name and email address."
+          },
+          "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
         }
       ],
       "schema_signals": {
@@ -119,7 +132,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "nizations in Sentry\n- Find an organization's slug to aid other tool requ"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -155,7 +168,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -171,7 +184,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "Find teams in an organization in Sentry.\n\nUse this tool whe"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -207,7 +220,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -236,7 +249,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": ":\n- View projects in a Sentry organization\n- Find a project's slug to ai"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -273,7 +286,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -302,7 +315,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "d recent releases in a Sentry organization\n- Find the most recent versio"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -340,7 +353,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "atically\n\nCommon tag keys:\n- `url`: Request URLs affected by th"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -357,7 +370,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "get issue tag values"
+            "snippet": "get_issue_tag_values get issue tag values"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -369,7 +382,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "g_values(organizationSlug='my-organization', issueId='PROJECT-123', tagK"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -382,7 +395,7 @@
           "evidence": {
             "zone": "description",
             "matched": "aggregate",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "ss different tag values\n- Get aggregate counts of unique tag values ("
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -419,7 +432,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "t a specific Sentry replay by URL or replay ID.\n\nUSE THIS TOOL"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -448,7 +461,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "details(replayUrl='https://my-organization.sentry.io/explore/replays/7e0"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -486,7 +499,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Download",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "Download attachments from a Sentry eve"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -502,8 +515,8 @@
           "evidence": {
             "zone": "name",
             "matched": "attachment",
-            "pattern": "\\b(read[_-]?file|get[_-]?file|file[_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
-            "snippet": "get event attachment"
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "et_event_attachment get event attachment"
           },
           "rationale": "Documents routinely contain secrets, PII, and proprietary material."
         },
@@ -516,7 +529,7 @@
             "zone": "name",
             "matched": "event",
             "pattern": "\\b(calendar|event|meeting|schedule|availability|appointment|invite)\\b",
-            "snippet": "get event attachment"
+            "snippet": "get_event_attachment get event attachment"
           },
           "rationale": "Reveals who you meet, when, and movements/availability."
         },
@@ -541,7 +554,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "tachment(organizationSlug='my-organization', projectSlug='my-project', e"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -587,7 +600,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -604,7 +617,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "update issue"
+            "snippet": "update_issue update issue"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -616,7 +629,7 @@
           "evidence": {
             "zone": "description",
             "matched": "team",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "gnedTo` format: `user:ID` or `team:ID_OR_SLUG`.\n- Use `whoami` t"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -660,7 +673,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "7d, 14d, 30d, etc. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -676,7 +689,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Transaction",
-            "pattern": "\\b(payment|invoice|transaction|billing|credit[_-]?card|bank|salary|payroll|ledger|account[_-]?balance)\\b",
+            "pattern": "\\b(payment|invoice|transaction|billing|credit[\\s_-]?card|bank|salary|payroll|ledger|account[\\s_-]?balance)\\b",
             "snippet": "ributions, values\n- profiles: Transaction/continuous profile results, p"
           },
           "rationale": "Direct financial exposure and a regulated data class."
@@ -689,7 +702,7 @@
           "evidence": {
             "zone": "description",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "files: Transaction/continuous profile results, profile IDs, profile"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -706,6 +719,19 @@
             "snippet": "y events and replays. Use for event counts/statistics.\n\n`query` c"
           },
           "rationale": "Reveals who you meet, when, and movements/availability."
+        },
+        {
+          "category": "browsing_history",
+          "label": "Browsing / activity history",
+          "tier": "high",
+          "confidence": "medium",
+          "evidence": {
+            "zone": "description",
+            "matched": "visited pages",
+            "pattern": "\\b(bookmarks|visited[\\s_-]?(url|site|page)s?)\\b",
+            "snippet": "ts: rage clicks, dead clicks, visited pages, replay users\nIf the user say"
+          },
+          "rationale": "A detailed behavioral profile of the user."
         },
         {
           "category": "project_metadata",
@@ -728,7 +754,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "stamp for newest\n</hints> The organization's slug. You can find a existi"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -741,7 +767,7 @@
           "evidence": {
             "zone": "description",
             "matched": "total",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "verages): 'how many errors', 'total tokens'\n2. Individual events"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -777,7 +803,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -806,8 +832,8 @@
           "evidence": {
             "zone": "name",
             "matched": "team",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
-            "snippet": "create team"
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
+            "snippet": "create_team create team"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
         }
@@ -844,7 +870,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -860,7 +886,7 @@
           "evidence": {
             "zone": "description",
             "matched": "repository",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "s is commonly the name of the repository or service. It is only used a"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -874,7 +900,7 @@
             "zone": "name",
             "matched": "project",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "create project"
+            "snippet": "create_project create project"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -886,7 +912,7 @@
           "evidence": {
             "zone": "description",
             "matched": "team",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "roject for [app/service] with team [X]'\n- 'I need a new Sentry p"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -926,7 +952,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -943,7 +969,7 @@
             "zone": "name",
             "matched": "project",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "update project"
+            "snippet": "update_project update project"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -955,7 +981,7 @@
           "evidence": {
             "zone": "description",
             "matched": "team",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "as name, slug, platform, and team assignment.\n\nBe careful when"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -992,7 +1018,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1021,7 +1047,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "eate_dsn(organizationSlug='my-organization', projectSlug='my-project', n"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1057,7 +1083,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1086,7 +1112,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "ations()` first.\n</hints> The organization's slug. You can find a existi"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1124,7 +1150,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "nizations()` tool. The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1141,7 +1167,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "analyze issue with seer"
+            "snippet": "alyze_issue_with_seer analyze issue with seer"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -1153,7 +1179,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "ith_seer(organizationSlug='my-organization', issueId='ERROR-456')\n```\n</"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1189,7 +1215,7 @@
           "evidence": {
             "zone": "description",
             "matched": "fetch",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "Use `get_doc(path='...')` to fetch full documentation content."
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1225,7 +1251,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Fetch",
-            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[_-]?request|send[_-]?request|api[_-]?call|post[_-]?to|send[_-]?to|exfil)\\b",
+            "pattern": "\\b(fetch|curl|wget|webhook|upload|download|http[\\s_-]?request|send[\\s_-]?request|api[\\s_-]?call|post[\\s_-]?to|send[\\s_-]?to|exfil)\\b",
             "snippet": "Fetch the full markdown content of"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1241,8 +1267,8 @@
           "evidence": {
             "zone": "name",
             "matched": "doc",
-            "pattern": "\\b(read[_-]?file|get[_-]?file|file[_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
-            "snippet": "get doc"
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "get_doc get doc"
           },
           "rationale": "Documents routinely contain secrets, PII, and proprietary material."
         }
@@ -1281,7 +1307,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "eric ID (optional) The region URL for the organization you're q"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1310,7 +1336,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "e.g., '123456').\n</hints> The organization's slug. You can find a existi"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1323,7 +1349,7 @@
           "evidence": {
             "zone": "description",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "like title, status, and user count.\n\nCommon Query Syntax:\n- is:u"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -1366,7 +1392,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "e issueUrl. Full Sentry issue URL (e.g., 'https://sentry.io/org"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1409,7 +1435,7 @@
             "zone": "name",
             "matched": "issue",
             "pattern": "\\b(project|task|issue|ticket|board|milestone|sprint|backlog|status|label|epic)\\b",
-            "snippet": "search issue events"
+            "snippet": "search_issue_events search issue events"
           },
           "rationale": "Names, statuses, and structure of work \u2014 identifying but not the underlying content."
         },
@@ -1421,7 +1447,7 @@
           "evidence": {
             "zone": "description",
             "matched": "Organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "statsPeriod='7d')\n</examples> Organization slug. Required when using iss"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1463,7 +1489,7 @@
           "evidence": {
             "zone": "description",
             "matched": "URL",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "shares a transaction profile URL and wants the details\n- User"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1492,7 +1518,7 @@
           "evidence": {
             "zone": "description",
             "matched": "transaction",
-            "pattern": "\\b(payment|invoice|transaction|billing|credit[_-]?card|bank|salary|payroll|ledger|account[_-]?balance)\\b",
+            "pattern": "\\b(payment|invoice|transaction|billing|credit[\\s_-]?card|bank|salary|payroll|ledger|account[\\s_-]?balance)\\b",
             "snippet": "IS TOOL WHEN:\n- User shares a transaction profile URL and wants the det"
           },
           "rationale": "Direct financial exposure and a regulated data class."
@@ -1505,8 +1531,8 @@
           "evidence": {
             "zone": "name",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
-            "snippet": "get profile details"
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
+            "snippet": "get_profile_details get profile details"
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
         },
@@ -1531,7 +1557,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "ous profile URL. If provided, organization, project, and profile identif"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1544,7 +1570,7 @@
           "evidence": {
             "zone": "description",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "cture summaries such as frame count, sample count, stacks, and th"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -1581,7 +1607,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url resourceType resourceId organ"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1610,7 +1636,7 @@
           "evidence": {
             "zone": "description",
             "matched": "diff",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "apshot=: returns the snapshot diff summary (changed, added, remo"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -1649,7 +1675,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "red when not using a URL. The organization's slug. You can find a existi"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1687,7 +1713,7 @@
           "evidence": {
             "zone": "description",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "mage, use get_sentry_resource(url='<snapshot_url>?selectedSnaps"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -1703,7 +1729,7 @@
           "evidence": {
             "zone": "description",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "ernews'). Required. Filter by git branch (e.g. 'main'). Omit to"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -1729,7 +1755,7 @@
           "evidence": {
             "zone": "description",
             "matched": "organization",
-            "pattern": "\\b(team|organization|org[_-]?chart|workspace|department|role|reporting[_-]?line)\\b",
+            "pattern": "\\b(team|organization|org[\\s_-]?chart|workspace|department|role|reporting[\\s_-]?line)\\b",
             "snippet": "he snapshot URL.\n</hints> The organization's slug. You can find a existi"
           },
           "rationale": "Reveals headcount, hierarchy, and reporting relationships."
@@ -1761,6 +1787,12 @@
         "tier": "critical",
         "tool_count": 4,
         "confidence": "medium"
+      },
+      "personal_identifiers": {
+        "label": "Personal identifiers (PII)",
+        "tier": "high",
+        "tool_count": 3,
+        "confidence": "high"
       },
       "org_structure": {
         "label": "Org / team structure",
@@ -1798,11 +1830,11 @@
         "tool_count": 2,
         "confidence": "medium"
       },
-      "personal_identifiers": {
-        "label": "Personal identifiers (PII)",
+      "browsing_history": {
+        "label": "Browsing / activity history",
         "tier": "high",
-        "tool_count": 2,
-        "confidence": "high"
+        "tool_count": 1,
+        "confidence": "medium"
       },
       "source_code": {
         "label": "Source code & repository contents",
@@ -1852,6 +1884,7 @@
     },
     "data_sensitivity_rating": "SENSITIVE",
     "data_categories_touched": [
+      "browsing_history",
       "calendar",
       "communications_content",
       "files_documents",

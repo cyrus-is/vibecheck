@@ -107,7 +107,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "query count offset"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."
@@ -141,7 +141,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "count",
-            "pattern": "\\b(public|published|open[_-]?data|aggregate|count|summary[_-]?stat|total)\\b",
+            "pattern": "\\b(public|published|open[\\s_-]?data|aggregate|count|summary[\\s_-]?stat|total)\\b",
             "snippet": "query count"
           },
           "rationale": "Already public or non-identifying \u2014 minimal exposure."

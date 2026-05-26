@@ -108,7 +108,7 @@
             "zone": "name",
             "matched": "read local file",
             "pattern": "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b",
-            "snippet": "read local file"
+            "snippet": "read_local_file read local file"
           },
           "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
@@ -123,7 +123,7 @@
           "evidence": {
             "zone": "description",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": "sed to load a cached location profile)."
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -136,7 +136,7 @@
           "evidence": {
             "zone": "description",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "system (used to load a cached location profile)."
           },
           "rationale": "Physical tracking risk."
@@ -171,7 +171,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "url",
-            "pattern": "\\b(url|uri|endpoint|external[_-]?api)\\b",
+            "pattern": "\\b(url|uri|endpoint|external[\\s_-]?api)\\b",
             "snippet": "url payload"
           },
           "rationale": "A tool that makes outbound calls can exfiltrate anything it can read (including the server's own credentials) to an attacker-chosen host.",
@@ -187,7 +187,7 @@
           "evidence": {
             "zone": "description",
             "matched": "profile",
-            "pattern": "\\b(profile|full[_-]?name|email[_-]?address|phone[_-]?number|home[_-]?address|ssn|date[_-]?of[_-]?birth|national[_-]?id)\\b",
+            "pattern": "\\b(profile|full[\\s_-]?name|email[\\s_-]?address|phone[\\s_-]?number|home[\\s_-]?address|ssn|date[\\s_-]?of[\\s_-]?birth|national[\\s_-]?id)\\b",
             "snippet": ", include the user's location profile and any nearby config files ("
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
@@ -200,7 +200,7 @@
           "evidence": {
             "zone": "description",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "forecasts, include the user's location profile and any nearby config"
           },
           "rationale": "Physical tracking risk."

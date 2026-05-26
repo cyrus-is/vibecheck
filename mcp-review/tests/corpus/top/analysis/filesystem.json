@@ -104,15 +104,29 @@
           "confidence": "high",
           "evidence": {
             "zone": "name",
-            "matched": "read file",
-            "pattern": "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b",
-            "snippet": "read file"
+            "matched": "read_file",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "read_file read file"
           },
           "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
         }
       ],
-      "data_categories": [],
+      "data_categories": [
+        {
+          "category": "files_documents",
+          "label": "File & document contents",
+          "tier": "high",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "read_file",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "read_file read file"
+          },
+          "rationale": "Documents routinely contain secrets, PII, and proprietary material."
+        }
+      ],
       "schema_signals": {
         "power_params": [],
         "destructive_flags": [],
@@ -120,7 +134,7 @@
       },
       "injection_signals": [],
       "max_severity": "MEDIUM",
-      "data_tier": null,
+      "data_tier": "high",
       "digest": "sha256:1a19f9c66da8234489eca4a46359ff2adbaed9b04b273e25135123764dbdb991"
     },
     {
@@ -142,9 +156,9 @@
           "confidence": "high",
           "evidence": {
             "zone": "name",
-            "matched": "read text file",
-            "pattern": "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b",
-            "snippet": "read text file"
+            "matched": "read text",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "read_text_file read text file"
           },
           "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
@@ -178,9 +192,9 @@
           "confidence": "high",
           "evidence": {
             "zone": "name",
-            "matched": "read media file",
-            "pattern": "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b",
-            "snippet": "read media file"
+            "matched": "read media",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "read_media_file read media file"
           },
           "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
@@ -216,7 +230,7 @@
             "zone": "name",
             "matched": "read multiple files",
             "pattern": "\\bread\\b[^.]{0,15}?\\b(file|files|contents?|document)\\b",
-            "snippet": "read multiple files"
+            "snippet": "read_multiple_files read multiple files"
           },
           "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
           "suppressed": false
@@ -241,7 +255,24 @@
         "content",
         "path"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_write",
+          "title": "Filesystem write / modify",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "write_file",
+            "pattern": "\\b(write|create|save|put|upload|append|modify|edit|patch)[\\s_-]?file\\b",
+            "snippet": "write_file write file"
+          },
+          "rationale": "Write access lets a server plant files, overwrite configs, or stage a later code-execution path.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [],
       "schema_signals": {
         "power_params": [],
@@ -249,7 +280,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": null,
       "digest": "sha256:7b912840bf28bc44ce107f55630d64b645ad78ed92be02185b7ca9143bb0b917"
     },
@@ -262,7 +293,24 @@
         "edits",
         "path"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_write",
+          "title": "Filesystem write / modify",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "edit_file",
+            "pattern": "\\b(write|create|save|put|upload|append|modify|edit|patch)[\\s_-]?file\\b",
+            "snippet": "edit_file edit file"
+          },
+          "rationale": "Write access lets a server plant files, overwrite configs, or stage a later code-execution path.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
         {
           "category": "source_code",
@@ -272,7 +320,7 @@
           "evidence": {
             "zone": "description",
             "matched": "git",
-            "pattern": "\\b(source[_-]?code|repository|repo|codebase|commit|diff|pull[_-]?request|blame|git)\\b",
+            "pattern": "\\b(source[\\s_-]?code|repository|repo|codebase|commit|diff|pull[\\s_-]?request|blame|git)\\b",
             "snippet": "s with new content. Returns a git-style diff showing the change"
           },
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
@@ -284,7 +332,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "critical",
       "digest": "sha256:fcbcdc0249981d411ac04fddf7b390b674d502fd5ad0cb0c37c9c23f74089b14"
     },
@@ -305,8 +353,8 @@
           "evidence": {
             "zone": "name",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
-            "snippet": "create directory"
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
+            "snippet": "create_directory create directory"
           },
           "rationale": "Exposes a person's full social/professional graph."
         }
@@ -338,8 +386,8 @@
           "evidence": {
             "zone": "name",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
-            "snippet": "list directory"
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
+            "snippet": "list_directory list directory"
           },
           "rationale": "Exposes a person's full social/professional graph."
         }
@@ -372,8 +420,8 @@
           "evidence": {
             "zone": "name",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
-            "snippet": "list directory with sizes"
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
+            "snippet": "ist_directory_with_sizes list directory with sizes"
           },
           "rationale": "Exposes a person's full social/professional graph."
         }
@@ -406,8 +454,8 @@
           "evidence": {
             "zone": "name",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
-            "snippet": "directory tree"
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
+            "snippet": "directory_tree directory tree"
           },
           "rationale": "Exposes a person's full social/professional graph."
         }
@@ -440,7 +488,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "mple renaming within the same directory. Both source and destination"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -475,7 +523,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "paths relative to the working directory. Use pattern like '*.ext' to"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -488,7 +536,7 @@
           "evidence": {
             "zone": "description",
             "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "en you don't know their exact location. Only searches within allowed"
           },
           "rationale": "Physical tracking risk."
@@ -511,8 +559,38 @@
       "param_names": [
         "path"
       ],
-      "candidate_capabilities": [],
+      "candidate_capabilities": [
+        {
+          "capability": "file_read",
+          "title": "Filesystem read",
+          "severity": "MEDIUM",
+          "default_classification": "ask",
+          "basis": "declared",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "get file",
+            "pattern": "\\b(read|get|load|open|cat|slurp|retrieve)[\\s_-]?(file|files|text|contents?|document|media)\\b",
+            "snippet": "get_file_info get file info"
+          },
+          "rationale": "Reading file contents is the most common SOURCE half of an exfiltration chain \u2014 pair it with any network_egress tool and the server can read a secret/config/document and send it out. Modelling read as a capability is what lets the read-then-send toxic combination fire.",
+          "suppressed": false
+        }
+      ],
       "data_categories": [
+        {
+          "category": "files_documents",
+          "label": "File & document contents",
+          "tier": "high",
+          "confidence": "high",
+          "evidence": {
+            "zone": "name",
+            "matched": "get file",
+            "pattern": "\\b(read[\\s_-]?file|get[\\s_-]?file|file[\\s_-]?content|document|attachment|download|drive|spreadsheet|pdf|doc)\\b",
+            "snippet": "get_file_info get file info"
+          },
+          "rationale": "Documents routinely contain secrets, PII, and proprietary material."
+        },
         {
           "category": "contacts",
           "label": "Contacts & address book",
@@ -521,7 +599,7 @@
           "evidence": {
             "zone": "description",
             "matched": "directory",
-            "pattern": "\\b(contact|address[_-]?book|directory|roster|connections)\\b",
+            "pattern": "\\b(contact|address[\\s_-]?book|directory|roster|connections)\\b",
             "snippet": "iled metadata about a file or directory. Returns comprehensive inform"
           },
           "rationale": "Exposes a person's full social/professional graph."
@@ -533,7 +611,7 @@
         "arbitrary_input": false
       },
       "injection_signals": [],
-      "max_severity": null,
+      "max_severity": "MEDIUM",
       "data_tier": "high",
       "digest": "sha256:6ff64b49d487d69c8743ec6c81fe5bb0cf7459267b6146b522d565e405a66ae8"
     },
@@ -563,6 +641,12 @@
       "high"
     ],
     "categories": {
+      "files_documents": {
+        "label": "File & document contents",
+        "tier": "high",
+        "tool_count": 2,
+        "confidence": "high"
+      },
       "source_code": {
         "label": "Source code & repository contents",
         "tier": "critical",
@@ -596,19 +680,20 @@
     "server_count": 1,
     "tool_count": 14,
     "active_config_findings": 3,
-    "active_tool_capabilities": 4,
+    "active_tool_capabilities": 7,
     "toxic_combination_count": 0,
     "injection_finding_count": 0,
     "approval_drift_count": 0,
     "severity_counts": {
       "HIGH": 1,
-      "MEDIUM": 6,
+      "MEDIUM": 9,
       "LOW": 0,
       "INFO": 0
     },
     "data_sensitivity_rating": "SENSITIVE",
     "data_categories_touched": [
       "contacts",
+      "files_documents",
       "location",
       "source_code"
     ],
