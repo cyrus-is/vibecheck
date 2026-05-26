@@ -314,7 +314,10 @@ dangerous_capabilities:
     severity: HIGH
     default_classification: ask
     patterns:
-      - "\\b(secret|credential|token|api[_-]?key|password|keychain|vault)\\b"
+      - "\\b(secret|credential|api[_-]?key|password|passwd|keychain|vault)\\b"
+      # 'token' split out with a negative lookahead so "token limit(s)" (LLM
+      # context windows) doesn't read as credential access.
+      - "\\btoken\\b(?!\\s+limit)"
       - "\\b(read[_-]?env|environment[_-]?variable|getenv|dotenv)\\b"
     rationale: >
       A tool that surfaces secrets pairs dangerously with any network_egress

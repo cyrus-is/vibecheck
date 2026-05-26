@@ -233,6 +233,24 @@ check("read_and_exfil MEDIUM: scoped read + egress",
       _combo([_scoped, _egress]).get("read_and_exfil") == "MEDIUM")
 check("no read_and_exfil without egress", "read_and_exfil" not in _combo([_read]))
 
+# --- Phase 4: confidence-gated toxic combinations ---
+# sensitive_env (server merely HOLDS a key) + egress => MEDIUM, not HIGH
+env_srv = A.analyze_server("s", {"command": "x", "env": {"API_KEY": "${API_KEY}"}}, G)
+egress_only = [A.analyze_tool(
+    {"name": "post", "description": "Send a payload.",
+     "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}}}}, "s", G)]
+ec = {c["id"]: (c["severity"], c["confidence"]) for c in A.toxic_combinations([env_srv], egress_only)}
+check("exfil_chain MEDIUM when only sensitive_env", ec.get("exfil_chain") == ("MEDIUM", "medium"))
+
+# a tool that actually READS secrets + egress => HIGH
+sec = A.analyze_tool({"name": "read_secret", "description": "Read a credential from the vault.",
+                      "inputSchema": {"type": "object", "properties": {"key": {"type": "string"}}}}, "s", G)
+up = A.analyze_tool({"name": "upload", "description": "Upload data.",
+                     "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}}}}, "s", G)
+ec2 = {c["id"]: (c["severity"], c["confidence"])
+       for c in A.toxic_combinations([A.analyze_server("s", {"command": "x"}, G)], [sec, up])}
+check("exfil_chain HIGH with a secrets-reading tool", ec2.get("exfil_chain") == ("HIGH", "high"))
+
 # --- suppression reconcile / stale exposure ---
 fs_only = [A.analyze_server("filesystem", A.find_server_map(cfg)["filesystem"], G)]
 recon = A.reconcile(fs_only, [],

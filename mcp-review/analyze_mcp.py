@@ -238,9 +238,14 @@ class Guidance:
         # is high-confidence; one only in prose is medium. This is what the
         # SKILL's "basis=declared" transparency promised, and it lets the verdict
         # layer (and the toxic-combo gate) discount weak signals.
+        # Normalize _/- to spaces in the NAME/param zones so word-boundary
+        # patterns fire on each token: "read_secret" -> "read secret",
+        # "run_shell_command" -> "run shell command". Without this, \b-anchored
+        # patterns never match underscore-joined tool names, so a genuinely
+        # dangerous tool only ever matched (medium-confidence) in its prose.
         zones = [
-            ("name", name or "", "high"),
-            ("param_name", " ".join(param_names), "high"),
+            ("name", _norm(name), "high"),
+            ("param_name", _norm(" ".join(param_names)), "high"),
             ("description", " ".join([description or ""] + param_descs), "medium"),
         ]
         hits = []
@@ -310,8 +315,8 @@ class Guidance:
     def data_category_hits(self, name: str, description: str,
                           param_names: list[str], param_descs: list[str]) -> list[dict]:
         zones = [
-            ("name", name or "", "high"),
-            ("param_name", " ".join(param_names), "high"),
+            ("name", _norm(name), "high"),
+            ("param_name", _norm(" ".join(param_names)), "high"),
             ("description", " ".join([description or ""] + param_descs), "medium"),
         ]
         hits = []
@@ -740,6 +745,12 @@ def _schema_param_text(schema) -> tuple[list[str], list[str]]:
     return names, descs
 
 
+def _norm(s: str) -> str:
+    """Replace _/- runs with spaces so \\b-anchored patterns fire on each token
+    of an underscore-joined identifier (read_secret -> 'read secret')."""
+    return re.sub(r"[_\-]+", " ", s or "")
+
+
 def _first_zone_match(regexes: list, zones: list) -> dict | None:
     """Search ordered (zone_name, text, confidence) tuples and return the FIRST
     match — zones are passed highest-confidence-first, so the returned evidence
@@ -876,38 +887,86 @@ def toxic_combinations(servers: list[dict], tools: list[dict]) -> list[dict]:
         for t in tools
     )
 
+    # Confidence gating: a toxic combination is only as strong as the capability
+    # signals that compose it. A combo whose contributing capability matched only
+    # in prose (medium confidence) — or whose "reads secrets" is merely the server
+    # REQUIRING a credential (sensitive_env) rather than a tool that READS one —
+    # is downgraded HIGH -> MEDIUM with a note. This stops one weak/false-positive
+    # signal from minting a deterministic HIGH (and is what kept credentialed API
+    # servers from all reading as HIGH exfil chains).
+    def _cap_conf(cap):
+        confs = [c.get("confidence") for t in tools
+                 for c in t["candidate_capabilities"] if c["capability"] == cap]
+        confs = [c for c in confs if c]
+        if not confs:
+            return None
+        return "high" if "high" in confs else "medium"
+
+    def _data_conf(cat):
+        confs = [d.get("confidence") for t in tools
+                 for d in t["data_categories"] if d["category"] == cat]
+        confs = [c for c in confs if c]
+        if not confs:
+            return None
+        return "high" if "high" in confs else "medium"
+
+    secret_tool = "secrets_access" in cap_set or "credentials_secrets" in data_set
+    secret_conf = _cap_conf("secrets_access") or _data_conf("credentials_secrets")
+    secret_strong = secret_tool and secret_conf == "high"
+    egress_weak = _cap_conf("network_egress") == "medium"
+
     combos = []
 
-    def add(cid, severity, title, detail, contributing):
+    def add(cid, severity, title, detail, contributing, confidence="high"):
         combos.append({
             "id": cid, "severity": severity, "title": title,
-            "detail": detail, "contributing": contributing,
+            "detail": detail, "contributing": contributing, "confidence": confidence,
         })
 
     if reads_secrets and egress:
-        add("exfil_chain", "HIGH",
+        # Strong only if an actual tool reads secrets AT HIGH CONFIDENCE.
+        # sensitive_env alone ("the server holds a credential it could leak") or
+        # a prose-only secret/token match is MEDIUM — the former is true of nearly
+        # every credentialed API server, the latter is often noise ("token limit").
+        weak = (not secret_strong) or egress_weak
+        note = ("" if secret_tool else
+                " No tool explicitly reads secrets — this is the server's own "
+                "required credential plus an egress path (true of most credentialed "
+                "API servers); confirm egress targets are fixed/trusted before "
+                "treating as active exfiltration.")
+        add("exfil_chain", "MEDIUM" if weak else "HIGH",
             "Read-then-send exfiltration chain",
-            "The server can both read secrets/credentials and make outbound "
-            "network calls — a complete path to exfiltrate them to an "
-            "attacker-chosen host.",
-            ["secrets_access/sensitive_env", "network_egress"])
+            "The server can both access secrets/credentials and make outbound "
+            "network calls — a path to exfiltrate them to an attacker-chosen host."
+            + note,
+            ["secrets_access" if secret_tool else "sensitive_env_required", "network_egress"],
+            confidence="medium" if weak else "high")
 
     if "code_execution" in cap_set and reads_secrets:
-        add("exec_with_secret_access", "HIGH",
+        weak = (not secret_strong) or _cap_conf("code_execution") == "medium"
+        add("exec_with_secret_access", "MEDIUM" if weak else "HIGH",
             "Code execution alongside secret access",
             "Arbitrary execution combined with credential access means a single "
-            "tool call can read and abuse every secret the server holds.",
-            ["code_execution", "secrets_access/sensitive_env"])
+            "tool call can read and abuse every secret the server holds."
+            + ("" if secret_tool else " (Secret access is a required credential, "
+               "not a secrets-reading tool — confirm in source.)"),
+            ["code_execution", "secrets_access" if secret_tool else "sensitive_env_required"],
+            confidence="medium" if weak else "high")
 
     if ("file_write" in cap_set or "file_delete" in cap_set) and egress:
-        add("remote_controlled_fs_mutation", "HIGH",
+        weak = egress_weak or (_cap_conf("file_write") == "medium" and _cap_conf("file_delete") in (None, "medium"))
+        add("remote_controlled_fs_mutation", "MEDIUM" if weak else "HIGH",
             "Filesystem mutation driven by network input",
             "The server can write/delete files and make network calls — remote "
             "input can drive destructive or persistence-establishing writes.",
-            ["file_write/file_delete", "network_egress"])
+            ["file_write/file_delete", "network_egress"],
+            confidence="medium" if weak else "high")
 
     if (reads_files or reads_comms) and egress:
-        sev = "HIGH" if arbitrary_read else "MEDIUM"
+        # HIGH only when the read is arbitrary AND the egress signal is strong;
+        # a prose-only egress match downgrades it.
+        strong = arbitrary_read and not egress_weak
+        sev = "HIGH" if strong else "MEDIUM"
         title = ("Arbitrary file read paired with egress" if arbitrary_read
                  else "File/message read paired with egress")
         detail = (
@@ -926,7 +985,8 @@ def toxic_combinations(servers: list[dict], tools: list[dict]) -> list[dict]:
         if broad_fs:
             contributing.append("broad_filesystem_scope")
         contributing.append("network_egress")
-        add("read_and_exfil", sev, title, detail, contributing)
+        add("read_and_exfil", sev, title, detail, contributing,
+            confidence="high" if strong else "medium")
 
     return combos
 
