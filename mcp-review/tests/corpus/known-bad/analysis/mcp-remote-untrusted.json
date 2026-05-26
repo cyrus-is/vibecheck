@@ -7,8 +7,8 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-remote",
-        "http://mcp.attacker.example/sse"
+        "mcp-remote-EXAMPLE-do-not-install",
+        "http://mcp.attacker.invalid/sse"
       ],
       "env_keys": [],
       "sensitive_env_keys": [],
@@ -16,7 +16,7 @@
       "redaction_ok": true,
       "provenance": {
         "source_type": "registry",
-        "spec": "mcp-remote",
+        "spec": "mcp-remote-EXAMPLE-do-not-install",
         "pin_strength": "none",
         "pin_detail": "no version specified (resolves to whatever the registry serves now)",
         "mutable_install_path": true,
@@ -35,18 +35,18 @@
           "non-interactive install (-y)"
         ]
       },
-      "digest": "sha256:8964680cd5546ce09bf9f0b7384f769e89a214cd5761bf306a6882e9628a72e1",
+      "digest": "sha256:9f0c6e8c29f0a9b1bc06c45ca3c4233b5eb4fe865e87ac1b2bb2a8bd2fcee1c6",
       "findings": [
         {
           "code": "package_runner_install",
           "severity": "MEDIUM",
           "category": "install",
           "title": "Installed on-the-fly via a package runner",
-          "detail": "Server 'mcp-remote-untrusted' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-remote.",
+          "detail": "Server 'mcp-remote-untrusted' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-remote-EXAMPLE-do-not-install.",
           "recommendation": "Install the server as a pinned dependency and invoke the local binary, or vendor it. If a runner is unavoidable, pin an exact version (see unpinned_source).",
           "evidence": {
             "runner": "npx",
-            "spec": "mcp-remote",
+            "spec": "mcp-remote-EXAMPLE-do-not-install",
             "auto_accept": [
               "-y"
             ]
@@ -58,10 +58,10 @@
           "severity": "HIGH",
           "category": "supply_chain",
           "title": "Package source is unpinned or mutable",
-          "detail": "Server 'mcp-remote-untrusted' package spec 'mcp-remote' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
+          "detail": "Server 'mcp-remote-untrusted' package spec 'mcp-remote-EXAMPLE-do-not-install' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
           "recommendation": "Pin an exact version (pkg@1.2.3) or a git commit SHA. Avoid @latest and branch refs.",
           "evidence": {
-            "spec": "mcp-remote",
+            "spec": "mcp-remote-EXAMPLE-do-not-install",
             "pin_strength": "none",
             "reason": "no version specified (resolves to whatever the registry serves now)"
           },

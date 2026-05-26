@@ -7,7 +7,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "postmark-mcp"
+        "postmark-mcp-EXAMPLE-do-not-install"
       ],
       "env_keys": [
         "POSTMARK_SERVER_TOKEN"
@@ -19,7 +19,7 @@
       "redaction_ok": true,
       "provenance": {
         "source_type": "registry",
-        "spec": "postmark-mcp",
+        "spec": "postmark-mcp-EXAMPLE-do-not-install",
         "pin_strength": "none",
         "pin_detail": "no version specified (resolves to whatever the registry serves now)",
         "mutable_install_path": true,
@@ -38,18 +38,18 @@
           "non-interactive install (-y)"
         ]
       },
-      "digest": "sha256:31f021b4e3b6ca9ec93afef4e5834c5f74eee61ad2cc979f3d3c8958ea1efbbe",
+      "digest": "sha256:139ac63e9253e4000042a6f6a54314db04879ba517d4cff0b2a3586c00323487",
       "findings": [
         {
           "code": "package_runner_install",
           "severity": "MEDIUM",
           "category": "install",
           "title": "Installed on-the-fly via a package runner",
-          "detail": "Server 'postmark-mcp' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: postmark-mcp.",
+          "detail": "Server 'postmark-mcp' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: postmark-mcp-EXAMPLE-do-not-install.",
           "recommendation": "Install the server as a pinned dependency and invoke the local binary, or vendor it. If a runner is unavoidable, pin an exact version (see unpinned_source).",
           "evidence": {
             "runner": "npx",
-            "spec": "postmark-mcp",
+            "spec": "postmark-mcp-EXAMPLE-do-not-install",
             "auto_accept": [
               "-y"
             ]
@@ -61,10 +61,10 @@
           "severity": "HIGH",
           "category": "supply_chain",
           "title": "Package source is unpinned or mutable",
-          "detail": "Server 'postmark-mcp' package spec 'postmark-mcp' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
+          "detail": "Server 'postmark-mcp' package spec 'postmark-mcp-EXAMPLE-do-not-install' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
           "recommendation": "Pin an exact version (pkg@1.2.3) or a git commit SHA. Avoid @latest and branch refs.",
           "evidence": {
-            "spec": "postmark-mcp",
+            "spec": "postmark-mcp-EXAMPLE-do-not-install",
             "pin_strength": "none",
             "reason": "no version specified (resolves to whatever the registry serves now)"
           },

@@ -8,7 +8,7 @@
       "args": [],
       "env_keys": [],
       "sensitive_env_keys": [],
-      "url": "http://api.datatool.example/mcp/sse?api_key=***",
+      "url": "http://api.datatool.invalid/mcp/sse?api_key=***",
       "redaction_ok": true,
       "provenance": {
         "source_type": "remote",
@@ -28,7 +28,7 @@
         "sandbox_evidence": "none_detected",
         "privilege_notes": []
       },
-      "digest": "sha256:50fe7909369366e1f4453e3242cd217792c400d5c8cc3db5025ee88a9ca830f3",
+      "digest": "sha256:0fe5ec6f42cd1a36ff126cf88afcd3b391a701a6fb952a7e491764befb4703d0",
       "findings": [
         {
           "code": "credentials_in_url",

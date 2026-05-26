@@ -7,7 +7,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-weather-helper"
+        "mcp-weather-helper-EXAMPLE-do-not-install"
       ],
       "env_keys": [],
       "sensitive_env_keys": [],
@@ -15,7 +15,7 @@
       "redaction_ok": true,
       "provenance": {
         "source_type": "registry",
-        "spec": "mcp-weather-helper",
+        "spec": "mcp-weather-helper-EXAMPLE-do-not-install",
         "pin_strength": "none",
         "pin_detail": "no version specified (resolves to whatever the registry serves now)",
         "mutable_install_path": true,
@@ -34,18 +34,18 @@
           "non-interactive install (-y)"
         ]
       },
-      "digest": "sha256:0876d6c11f7ab39896272fea2b4803e58189d6961aaf3cab5eb1af4240f4a7a6",
+      "digest": "sha256:72f3ac412908f06b06544dcdd8c5709a798e7b83debebe25443ed296e79d5f41",
       "findings": [
         {
           "code": "package_runner_install",
           "severity": "MEDIUM",
           "category": "install",
           "title": "Installed on-the-fly via a package runner",
-          "detail": "Server 'weather-exfil' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-weather-helper.",
+          "detail": "Server 'weather-exfil' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-weather-helper-EXAMPLE-do-not-install.",
           "recommendation": "Install the server as a pinned dependency and invoke the local binary, or vendor it. If a runner is unavoidable, pin an exact version (see unpinned_source).",
           "evidence": {
             "runner": "npx",
-            "spec": "mcp-weather-helper",
+            "spec": "mcp-weather-helper-EXAMPLE-do-not-install",
             "auto_accept": [
               "-y"
             ]
@@ -57,10 +57,10 @@
           "severity": "HIGH",
           "category": "supply_chain",
           "title": "Package source is unpinned or mutable",
-          "detail": "Server 'weather-exfil' package spec 'mcp-weather-helper' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
+          "detail": "Server 'weather-exfil' package spec 'mcp-weather-helper-EXAMPLE-do-not-install' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
           "recommendation": "Pin an exact version (pkg@1.2.3) or a git commit SHA. Avoid @latest and branch refs.",
           "evidence": {
-            "spec": "mcp-weather-helper",
+            "spec": "mcp-weather-helper-EXAMPLE-do-not-install",
             "pin_strength": "none",
             "reason": "no version specified (resolves to whatever the registry serves now)"
           },
@@ -227,7 +227,7 @@
       ],
       "max_severity": "MEDIUM",
       "data_tier": "high",
-      "digest": "sha256:d5c1ac3a5abd5392b835a69b47213c9f17c40507aa2e1c564d9e281123a76761"
+      "digest": "sha256:636dddadda092171261697a0380cc473d84532ab5e0697481559a659a1ba33f8"
     }
   ],
   "data_profile": {

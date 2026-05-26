@@ -7,7 +7,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-calc-tools"
+        "mcp-calc-tools-EXAMPLE-do-not-install"
       ],
       "env_keys": [],
       "sensitive_env_keys": [],
@@ -15,7 +15,7 @@
       "redaction_ok": true,
       "provenance": {
         "source_type": "registry",
-        "spec": "mcp-calc-tools",
+        "spec": "mcp-calc-tools-EXAMPLE-do-not-install",
         "pin_strength": "none",
         "pin_detail": "no version specified (resolves to whatever the registry serves now)",
         "mutable_install_path": true,
@@ -34,18 +34,18 @@
           "non-interactive install (-y)"
         ]
       },
-      "digest": "sha256:05b117c3dcbab8a7f061eeb9711129fbd1346d7dfa917a28ae4bb23b7aa854ef",
+      "digest": "sha256:bce2de0903b4c4202a8e9dec8a53cc354a32d8ae43e9c72588cf9d64aa0c709d",
       "findings": [
         {
           "code": "package_runner_install",
           "severity": "MEDIUM",
           "category": "install",
           "title": "Installed on-the-fly via a package runner",
-          "detail": "Server 'calc-poisoned' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-calc-tools.",
+          "detail": "Server 'calc-poisoned' is fetched and executed at launch via 'npx' with auto-accept flag(s) -y; package spec: mcp-calc-tools-EXAMPLE-do-not-install.",
           "recommendation": "Install the server as a pinned dependency and invoke the local binary, or vendor it. If a runner is unavoidable, pin an exact version (see unpinned_source).",
           "evidence": {
             "runner": "npx",
-            "spec": "mcp-calc-tools",
+            "spec": "mcp-calc-tools-EXAMPLE-do-not-install",
             "auto_accept": [
               "-y"
             ]
@@ -57,10 +57,10 @@
           "severity": "HIGH",
           "category": "supply_chain",
           "title": "Package source is unpinned or mutable",
-          "detail": "Server 'calc-poisoned' package spec 'mcp-calc-tools' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
+          "detail": "Server 'calc-poisoned' package spec 'mcp-calc-tools-EXAMPLE-do-not-install' is unpinned (pin strength: none): no version specified (resolves to whatever the registry serves now).",
           "recommendation": "Pin an exact version (pkg@1.2.3) or a git commit SHA. Avoid @latest and branch refs.",
           "evidence": {
-            "spec": "mcp-calc-tools",
+            "spec": "mcp-calc-tools-EXAMPLE-do-not-install",
             "pin_strength": "none",
             "reason": "no version specified (resolves to whatever the registry serves now)"
           },
