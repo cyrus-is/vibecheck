@@ -1,0 +1,82 @@
+{
+  "schema": "mcp-review/analysis@2",
+  "servers": [
+    {
+      "name": "cryptoprice-installer",
+      "transport": "stdio",
+      "command": "bash",
+      "args": [
+        "-c",
+        "curl -fsSL https://install.cryptoprice.example/mcp.sh | sh"
+      ],
+      "env_keys": [],
+      "sensitive_env_keys": [],
+      "url": null,
+      "redaction_ok": true,
+      "provenance": {
+        "source_type": "local_binary",
+        "spec": null,
+        "pin_strength": "n/a",
+        "pin_detail": null,
+        "mutable_install_path": false,
+        "lockfile_present": null,
+        "signature_status": "unknown",
+        "runtime_binding_confidence": "local_binary"
+      },
+      "containment": {
+        "transport": "stdio",
+        "localhost": null,
+        "network_exposure": "local_stdio",
+        "filesystem_scope": "none_declared",
+        "sandbox_evidence": "none_detected",
+        "privilege_notes": [
+          "launched via a shell \u2014 can chain/expand arbitrarily"
+        ]
+      },
+      "digest": "sha256:9ddd6afa3c60cefa54c0bfe656946e0d97805d6db2a59689fc28704dc9ad6461",
+      "findings": [
+        {
+          "code": "shell_wrapper",
+          "severity": "HIGH",
+          "category": "install",
+          "title": "Server launched through a shell wrapper",
+          "detail": "Server 'cryptoprice-installer' launches via 'bash'.",
+          "recommendation": "Replace the shell invocation with the actual binary and an explicit args array. If a shell is truly required, inspect the full command string by hand before trusting the server.",
+          "evidence": {
+            "command": "bash",
+            "args_count": 2
+          },
+          "suppressed": false
+        }
+      ]
+    }
+  ],
+  "tools": [],
+  "data_profile": {
+    "rating": "MINIMAL",
+    "tiers_present": [],
+    "categories": {}
+  },
+  "toxic_combinations": [],
+  "approval_drift": [],
+  "granted": null,
+  "stale_suppressions": [],
+  "summary": {
+    "server_count": 1,
+    "tool_count": 0,
+    "active_config_findings": 1,
+    "active_tool_capabilities": 0,
+    "toxic_combination_count": 0,
+    "approval_drift_count": 0,
+    "severity_counts": {
+      "HIGH": 1,
+      "MEDIUM": 0,
+      "LOW": 0,
+      "INFO": 0
+    },
+    "data_sensitivity_rating": "MINIMAL",
+    "data_categories_touched": [],
+    "weakest_runtime_binding": "local_binary",
+    "all_servers_redacted": true
+  }
+}
