@@ -1038,19 +1038,6 @@
           "rationale": "Proprietary logic, embedded secrets, and architecture all live in source."
         },
         {
-          "category": "calendar",
-          "label": "Calendar & schedule",
-          "tier": "high",
-          "confidence": "high",
-          "evidence": {
-            "zone": "param_name",
-            "matched": "event",
-            "pattern": "\\b(calendar|event|meeting|schedule|availability|appointment|invite)\\b",
-            "snippet": "po pull_number commit_id body event comments path position body p"
-          },
-          "rationale": "Reveals who you meet, when, and movements/availability."
-        },
-        {
           "category": "org_structure",
           "label": "Org / team structure",
           "tier": "medium",
@@ -1437,12 +1424,6 @@
         "tier": "medium",
         "tool_count": 6,
         "confidence": "high"
-      },
-      "calendar": {
-        "label": "Calendar & schedule",
-        "tier": "high",
-        "tool_count": 1,
-        "confidence": "high"
       }
     }
   },
@@ -1467,7 +1448,6 @@
     },
     "data_sensitivity_rating": "HIGHLY_SENSITIVE",
     "data_categories_touched": [
-      "calendar",
       "communications_content",
       "contacts",
       "files_documents",

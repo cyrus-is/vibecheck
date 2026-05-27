@@ -480,7 +480,11 @@ data_sensitivity:
     label: Calendar & schedule
     tier: high
     patterns:
-      - "\\b(calendar|event|meeting|schedule|availability|appointment|invite)\\b"
+      # Bare "event"/"schedule"/"availability"/"invite" are overloaded: event
+      # handlers, telemetry/risk events, cron schedules, service/inventory
+      # availability, repo/team invites. Require explicit calendar vocabulary.
+      - "\\b(calendar|appointment|meeting|rsvp|attendee)\\b"
+      - "\\b(calendar|meeting)[\\s_-]?(event|invite)\\b"
     rationale: Reveals who you meet, when, and movements/availability.
 
   contacts:
@@ -494,7 +498,12 @@ data_sensitivity:
     label: Location data
     tier: high
     patterns:
-      - "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b"
+      # Bare "location"/"coordinates" are overloaded: 3D actor coords (x/y/z),
+      # LSP code locations, screen-tap coordinates, schema columns named
+      # "location". Require an explicit geographic signal or a geo-qualified
+      # "location"; precise geo terms (gps/lat/long/geolocation) carry the rest.
+      - "\\b(gps|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b"
+      - "\\b(physical|current|user|device|home|work|pickup|delivery|destination|origin)[\\s_-]?location\\b"
     rationale: Physical tracking risk.
 
   browsing_history:

@@ -368,6 +368,36 @@ check("cred tp: personal access token is credential",
 check("cred tp: api_key still credential",
       "credentials_secrets" in _dcats("configure", "Set the api_key for the service."))
 
+# --- 1.6.4: location/calendar sense disambiguation ---
+# location: bare "location"/"coordinates" (3D, code, screen, schema) must NOT match
+check("loc fp: 3D actor location not geo",
+      "location" not in _dcats("control_actor", "Set the actor location x y z and rotation."))
+check("loc fp: LSP code location not geo",
+      "location" not in _dcats("goto_definition", "Return the location of the symbol in source."))
+check("loc fp: screen coordinates not geo",
+      "location" not in _dcats("tap", "Tap at the given screen coordinates."))
+check("loc fp: schema column 'location' not geo",
+      "location" not in _dcats("validate_node", "Columns: source, table_name, location, properties."))
+# location: real geographic signals MUST match
+check("loc tp: gps is geo", "location" in _dcats("get_track", "Return the GPS coordinates of the activity."))
+check("loc tp: latitude is geo", "location" in _dcats("place_search", "Search near a latitude/longitude."))
+check("loc tp: geolocation is geo", "location" in _dcats("emulate", "Override the browser geolocation."))
+check("loc tp: user location is geo", "location" in _dcats("locate", "Resolve the user location."))
+
+# calendar: overloaded event/schedule/availability/invite must NOT match
+check("cal fp: telemetry event not calendar",
+      "calendar" not in _dcats("track", "Record a telemetry event."))
+check("cal fp: cron schedule not calendar",
+      "calendar" not in _dcats("smart_cron", "Run on a cron schedule."))
+check("cal fp: service availability not calendar",
+      "calendar" not in _dcats("status", "Report service availability."))
+check("cal fp: repo invite not calendar",
+      "calendar" not in _dcats("add_member", "Send a repository invite."))
+# calendar: real calendar vocabulary MUST match
+check("cal tp: calendar is calendar", "calendar" in _dcats("list", "List events on the user's calendar."))
+check("cal tp: meeting is calendar", "calendar" in _dcats("schedule", "Schedule a meeting with attendees."))
+check("cal tp: appointment is calendar", "calendar" in _dcats("book", "Book an appointment."))
+
 # --- Phase 9: agentic validator scaffolding (deterministic plumbing) ---
 _van = {
     "tools": [{"name": "web_search", "description": "Search the web.", "param_names": ["query"],

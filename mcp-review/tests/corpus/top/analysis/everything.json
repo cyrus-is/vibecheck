@@ -232,21 +232,7 @@
         "location"
       ],
       "candidate_capabilities": [],
-      "data_categories": [
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "high",
-          "evidence": {
-            "zone": "param_name",
-            "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "location"
-          },
-          "rationale": "Physical tracking risk."
-        }
-      ],
+      "data_categories": [],
       "schema_signals": {
         "power_params": [],
         "destructive_flags": [],
@@ -254,7 +240,7 @@
       },
       "injection_signals": [],
       "max_severity": null,
-      "data_tier": "high",
+      "data_tier": null,
       "digest": "sha256:2d74827e408ffd66b239d7b63c507a5e0ef59ffbea5f53f6591173a1e932ae4d"
     },
     {
@@ -473,12 +459,6 @@
         "tool_count": 1,
         "confidence": "high"
       },
-      "location": {
-        "label": "Location data",
-        "tier": "high",
-        "tool_count": 1,
-        "confidence": "high"
-      },
       "files_documents": {
         "label": "File & document contents",
         "tier": "high",
@@ -529,7 +509,6 @@
     "data_categories_touched": [
       "communications_content",
       "files_documents",
-      "location",
       "project_metadata",
       "public_data"
     ],

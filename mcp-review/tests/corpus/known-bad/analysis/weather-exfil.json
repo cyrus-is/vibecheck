@@ -127,19 +127,6 @@
             "snippet": "sed to load a cached location profile)."
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
-        },
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "medium",
-          "evidence": {
-            "zone": "description",
-            "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "system (used to load a cached location profile)."
-          },
-          "rationale": "Physical tracking risk."
         }
       ],
       "schema_signals": {
@@ -191,19 +178,6 @@
             "snippet": ", include the user's location profile and any nearby config files ("
           },
           "rationale": "Identifies real people; aggregation enables tracking and de-anonymization."
-        },
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "medium",
-          "evidence": {
-            "zone": "description",
-            "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "forecasts, include the user's location profile and any nearby config"
-          },
-          "rationale": "Physical tracking risk."
         }
       ],
       "schema_signals": {
@@ -239,12 +213,6 @@
     "categories": {
       "personal_identifiers": {
         "label": "Personal identifiers (PII)",
-        "tier": "high",
-        "tool_count": 2,
-        "confidence": "medium"
-      },
-      "location": {
-        "label": "Location data",
         "tier": "high",
         "tool_count": 2,
         "confidence": "medium"
@@ -304,7 +272,6 @@
     },
     "data_sensitivity_rating": "SENSITIVE",
     "data_categories_touched": [
-      "location",
       "personal_identifiers"
     ],
     "weakest_runtime_binding": "none",

@@ -48,6 +48,7 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import sys
 import tarfile
@@ -626,12 +627,30 @@ def plan_to_resolved(plan: dict) -> dict:
 # CLI
 # ---------------------------------------------------------------------------
 
+def safe_cleanup(path: str) -> dict:
+    """Remove a fetch_source temp extract dir after a review is done with it.
+
+    Guarded: only deletes a directory whose name carries the 'mcp-review-src-'
+    prefix this tool creates (via tempfile.mkdtemp), so a mistyped --cleanup can
+    never rm an arbitrary path. A user-chosen --dest is the caller's to remove."""
+    p = Path(path)
+    if not p.name.startswith("mcp-review-src-"):
+        raise ValueError(
+            f"refusing to delete {path!r}: not a fetch_source temp dir (its name "
+            "must start with 'mcp-review-src-'). If you passed your own --dest, "
+            "remove it yourself.")
+    if not p.is_dir():
+        return {"cleaned": False, "path": str(p), "reason": "not a directory (already removed?)"}
+    shutil.rmtree(p)
+    return {"cleaned": True, "path": str(p)}
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Safely fetch + extract MCP server source for /scrutineer-mcp Pass 3.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    src = parser.add_mutually_exclusive_group(required=True)
+    src = parser.add_mutually_exclusive_group(required=False)
     src.add_argument("--npm", help="npm spec, e.g. '@scope/pkg@1.2.3'")
     src.add_argument("--pypi", help="PyPI spec, e.g. 'pkg==1.2.3'")
     src.add_argument("--github", help="GitHub 'owner/repo' (use --ref for the commit/tag)")
@@ -641,8 +660,21 @@ def main():
     parser.add_argument("--fetch", action="store_true",
                         help="actually download + extract (default: offline plan only)")
     parser.add_argument("--dest", help="extract dir (default: a throwaway temp dir)")
+    parser.add_argument("--cleanup", metavar="DIR",
+                        help="safely remove a fetch_source temp extract dir "
+                             "(name must start with 'mcp-review-src-') and exit")
     parser.add_argument("--indent", type=int, default=2, help="JSON output indent")
     args = parser.parse_args()
+
+    if args.cleanup:
+        try:
+            print(json.dumps(safe_cleanup(args.cleanup), indent=args.indent))
+        except (ValueError, OSError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        return
+    if not (args.npm or args.pypi or args.github or args.analysis):
+        parser.error("one of --npm / --pypi / --github / --analysis is required (or --cleanup DIR)")
 
     try:
         if args.analysis:

@@ -96,21 +96,7 @@
         "address"
       ],
       "candidate_capabilities": [],
-      "data_categories": [
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "medium",
-          "evidence": {
-            "zone": "description",
-            "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "rt an address into geographic coordinates The address to geocode"
-          },
-          "rationale": "Physical tracking risk."
-        }
-      ],
+      "data_categories": [],
       "schema_signals": {
         "power_params": [],
         "destructive_flags": [],
@@ -118,7 +104,7 @@
       },
       "injection_signals": [],
       "max_severity": null,
-      "data_tier": "high",
+      "data_tier": null,
       "digest": "sha256:8f56d1a5093f226713594db6c9bad0cb26b4b0ebe6591844006397699c2dd842"
     },
     {
@@ -139,7 +125,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(gps|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "latitude longitude"
           },
           "rationale": "Physical tracking risk."
@@ -173,8 +159,8 @@
           "confidence": "high",
           "evidence": {
             "zone": "param_name",
-            "matched": "location",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
+            "matched": "latitude",
+            "pattern": "\\b(gps|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "query location latitude longitude radius"
           },
           "rationale": "Physical tracking risk."
@@ -219,21 +205,7 @@
         "origins"
       ],
       "candidate_capabilities": [],
-      "data_categories": [
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "medium",
-          "evidence": {
-            "zone": "description",
-            "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "Array of origin addresses or coordinates Array of destination addresse"
-          },
-          "rationale": "Physical tracking risk."
-        }
-      ],
+      "data_categories": [],
       "schema_signals": {
         "power_params": [],
         "destructive_flags": [],
@@ -241,7 +213,7 @@
       },
       "injection_signals": [],
       "max_severity": null,
-      "data_tier": "high",
+      "data_tier": null,
       "digest": "sha256:d99bccb445a4479f1a9ed1cdab08ea0603abfb574282fe9eec99e3cfd947745c"
     },
     {
@@ -261,7 +233,7 @@
           "evidence": {
             "zone": "param_name",
             "matched": "latitude",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
+            "pattern": "\\b(gps|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
             "snippet": "locations latitude longitude"
           },
           "rationale": "Physical tracking risk."
@@ -287,21 +259,7 @@
         "origin"
       ],
       "candidate_capabilities": [],
-      "data_categories": [
-        {
-          "category": "location",
-          "label": "Location data",
-          "tier": "high",
-          "confidence": "medium",
-          "evidence": {
-            "zone": "description",
-            "matched": "coordinates",
-            "pattern": "\\b(location|gps|coordinates|geo[\\s_-]?location|latitude|longitude|whereabouts)\\b",
-            "snippet": "nts Starting point address or coordinates Ending point address or coord"
-          },
-          "rationale": "Physical tracking risk."
-        }
-      ],
+      "data_categories": [],
       "schema_signals": {
         "power_params": [],
         "destructive_flags": [],
@@ -309,7 +267,7 @@
       },
       "injection_signals": [],
       "max_severity": null,
-      "data_tier": "high",
+      "data_tier": null,
       "digest": "sha256:567eea3ab6655bf44bbcf234425df548bcbd5eb2823f7d0ed9fd9973eff1eedd"
     }
   ],
@@ -323,7 +281,7 @@
       "location": {
         "label": "Location data",
         "tier": "high",
-        "tool_count": 6,
+        "tool_count": 3,
         "confidence": "high"
       }
     }

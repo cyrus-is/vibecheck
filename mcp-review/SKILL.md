@@ -45,6 +45,8 @@ A server can be perfectly secure (SAFE) and still want to read every message you
 - `--tools` (optional): path to a captured `tools/list` response JSON. Enables Pass 2.
 - `--allowlist` (optional): path to a `settings.json` / `.mcp.json` whose `permissions` block is checked
   for approval drift (see below). Often the same file as `--config`.
+- `--cleanup` (optional): after a Pass-3 source review, delete the fetched source automatically instead of
+  prompting (see *Clean up the fetched source*). Use for batch/non-interactive runs.
 - A bare argument that isn't a flag is treated as a **server name** to scope the review to.
 
 ### Config auto-discovery
@@ -241,6 +243,26 @@ Review the tool handlers for:
 
 Source findings use the same severity vocabulary as the security review (CRITICAL/HIGH/MEDIUM/LOW) and a
 concrete exploit path, just like `/scrutineer-security`.
+
+### Clean up the fetched source
+
+`fetch_source.py` extracts into a throwaway temp dir (`mcp-review-src-*`) and **leaves it on disk** so this
+review can read it — nothing deletes it automatically. Once the source review above is done, don't leave a
+copy of an untrusted package lying around:
+
+- **Default — ask first.** Tell the user what was downloaded and where, and ask permission to delete it,
+  e.g. *"Reviewed source for `<pkg>` at `<dir>` — delete it now? (recommended)"* On yes, remove it with the
+  guarded helper (it refuses any path not named `mcp-review-src-*`, so it can't rm the wrong thing):
+
+  ```bash
+  mcp-review/.venv/bin/python mcp-review/fetch_source.py --cleanup <dir>
+  ```
+
+- **`--cleanup` flag — don't ask.** If the user invoked `/scrutineer-mcp --cleanup`, delete the fetched
+  source automatically after the review (no prompt). Use this for batch/non-interactive runs.
+
+If you reviewed source you fetched via `npx`/`uvx` yourself (to capture a tool surface), note that the
+package also remains in the npm/uv cache — clearing that is the user's call, outside this helper's scope.
 
 ### Closed-source / binary degradation
 
