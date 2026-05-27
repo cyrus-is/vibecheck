@@ -188,14 +188,19 @@ silently, with no signal, on every run, forever. You re-extend trust to the
 publisher's account + the registry + the network automatically, every time your
 agent starts the server.
 
-For an ordinary library, auto-latest is a reasonable trade — you want the patches.
-For an MCP server it's different: you've handed it **tool access, data access, and
-usually a live credential**, and an agent launches it on your behalf. That's a large
-standing grant being silently re-pointed at unreviewed code. The postmark-mcp
-backdoor is the worked example — v1.0.16 added a line that BCC'd every email to the
-author, and anyone on auto-latest shipped it into their own stack the next time the
-server booted. A pin wouldn't have made the new code safe, but it would have turned a
-silent auto-update into a *decision*.
+Auto-latest is bad practice for *any* dependency, not just MCP — it's how supply-chain
+attacks spread. When `axios` (100M+ weekly downloads) was compromised in March 2026 its
+malicious versions were live ~3 hours before removal; the September 2025 `chalk`/`debug`
+maintainer phish lasted ~2 hours, across packages with 2.6B weekly downloads. The
+control that defeats the common case is boring: **pin an exact version, and don't run a
+release until it's aged ~a week** (long enough that a malicious one has usually been
+caught and pulled), then bump deliberately. Not a silver bullet — a patient backdoor
+like xz/liblzma aged past any cooldown — but a *strong* control, and it applies to
+everything you install. MCP just raises the stakes (you've handed the server tool
+access, data access, and usually a live credential, launched by an agent) and ships the
+bad default: `npx -y` / `uvx`, unpinned-newest-on-every-run. postmark-mcp is the worked
+example — v1.0.16 added a line BCC'ing every email to the author, and anyone on
+auto-latest shipped it on the next boot.
 
 And "latest" doesn't even mean what people assume. The version-drift check found
 **38 of the 56 captured servers ran a different version than the registry declared**,
